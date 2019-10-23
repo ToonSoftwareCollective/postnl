@@ -1,0 +1,3 @@
+module apps.postnl
+PostnlApp 1.0 PostnlApp.qml
+PostnlTile 1.0 PostnlTile.qml

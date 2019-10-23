@@ -1,0 +1,22 @@
+1.0.5
+- standardized settings file name to /mnt/data/tsc/postnl.userSettings.json
+  no new functionality
+
+1.0.4
+- saves retrieved package datat to /var/volatile/tmp/postnl_inbox.json
+  this will help to debug data related issues
+- login credentials are now saved in /mnt/data/tsc/postnl_userSettings.json
+
+1.0.3
+- packages which are just handed in for shipment at the post office are now also shown correctly at Toon
+  when you added the barcode to your PostNL account while still in the post office
+- data will be retrieved only two minutes after initialising the app
+
+1.0.2
+-Packages which are returned to sender are now also shown properly
+
+1.0.1
+- added 'brievenbuspost' dates to the main screen
+
+1.0.0
+- initial release
