@@ -1,4 +1,4 @@
-import QtQuick 1.1
+import QtQuick 2.1
 import qb.components 1.0
 import qb.base 1.0
 import FileIO 1.0
@@ -7,7 +7,7 @@ App {
 	id: postnlApp
 
 	property url tileUrl : "PostnlTile.qml";
-	property url thumbnailIcon: "./drawables/postnl.png";
+	property url thumbnailIcon: "qrc:/tsc/postnl.png";
 	property url postnlScreenUrl : "PostnlScreen.qml"
 	property url postnlConfigurationScreenUrl : "PostnlConfigurationScreen.qml"
 	property url trayUrl : "PostnlTray.qml";
@@ -23,7 +23,7 @@ App {
 	property variant postNLData
 	property variant lettersData
 	property variant letterDetails
-	property string letterImageUrl : "./drawables/refresh.svg"
+	property string letterImageUrl : "qrc:/tsc/refresh.svg"
 
 	property string postnlUserid
 	property string postnlPassword

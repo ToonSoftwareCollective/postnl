@@ -1,4 +1,4 @@
-import QtQuick 1.1
+import QtQuick 2.1
 import qb.components 1.0
 import BasicUIControls 1.0;
 
@@ -182,7 +182,7 @@ Screen {
 			anchors.bottom: parent.bottom
 			leftClickMargin: 3
 			bottomClickMargin: 5
-			iconSource: "./drawables/refresh.svg"
+			iconSource: "qrc:/tsc/refresh.svg"
 			onClicked: app.refreshPostNLData()
 		}
 	}

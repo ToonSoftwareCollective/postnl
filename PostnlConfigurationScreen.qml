@@ -1,4 +1,4 @@
-import QtQuick 1.1
+import QtQuick 2.1
 import qb.components 1.0
 import BasicUIControls 1.0;
 
@@ -61,7 +61,7 @@ Screen {
 	IconButton {
 		id: postnlUseridButton;
 		width: isNxt ? 50 : 40
-		iconSource: "./drawables/edit.png"
+		iconSource: "qrc:/tsc/edit.png"
 
 		anchors {
 			left: postnlUseridLabel.right
@@ -127,7 +127,7 @@ Screen {
 	IconButton {
 		id: postnlPasswordButton;
 		width: isNxt ? 50 : 40
-		iconSource: "./drawables/edit.png"
+		iconSource: "qrc:/tsc/edit.png"
 
 		anchors {
 			left: postnlPassword.right
