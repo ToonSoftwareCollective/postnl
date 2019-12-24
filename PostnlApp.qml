@@ -100,16 +100,12 @@ App {
 
 	function refreshPostNLDataStep2(staticKey) {
 
-       		var params = "sensor_data=111111111111";
+       		var params = '{"sensor_data":"111111111111"}';
 		var xmlhttp = new XMLHttpRequest();
 		xmlhttp.open("POST", "https://jouw.postnl.nl/static/" + staticKey, true);
-        	xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-        	xmlhttp.setRequestHeader("Content-length", params.length);
-        	xmlhttp.setRequestHeader("Connection", "close");
+        	xmlhttp.setRequestHeader("Content-type", "text/plain;charset=UTF-8");
 		xmlhttp.onreadystatechange = function() {
 			if (xmlhttp.readyState == XMLHttpRequest.DONE) {
-				console.log("********* PostNL Step2 key:" + staticKey);
-				console.log("********* PostNL Step2:" + xmlhttp.responseText);
 				refreshPostNLDataStep3();
 			}
 		}
@@ -126,7 +122,6 @@ App {
         	xmlhttp.setRequestHeader("Connection", "close");
 		xmlhttp.onreadystatechange = function() {
 			if (xmlhttp.readyState == XMLHttpRequest.DONE) {
-				console.log("********* PostNL step 3:" + xmlhttp.responseText);
 				accessTokenJson	= JSON.parse(xmlhttp.responseText); 
 				if (accessTokenJson['error'] !== "accountnotfound") {
 					readLetters();
@@ -145,7 +140,6 @@ App {
        	 	xmlhttp.setRequestHeader("Connection", "close");
  		xmlhttp.onreadystatechange = function() {
 			if (xmlhttp.readyState == XMLHttpRequest.DONE) {
-//				console.log("********* PostNL Access inbox:" + xmlhttp.responseText);
 				postNLData = JSON.parse(xmlhttp.responseText);
 				saveInbox(xmlhttp.responseText);
 				if (postNLData['receiver'].length > 0) {

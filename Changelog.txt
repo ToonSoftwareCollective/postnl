@@ -1,3 +1,6 @@
+1.0.6
+- implemented workaround for the new security setup of postnl (thanks to glfs91)
+
 1.0.5
 - standardized settings file name to /mnt/data/tsc/postnl.userSettings.json
   no new functionality
