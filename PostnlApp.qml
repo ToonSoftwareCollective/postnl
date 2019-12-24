@@ -27,6 +27,7 @@ App {
 
 	property string postnlUserid
 	property string postnlPassword
+	property string staticKey
 
 	property string tileBarcode : "even geduld a.u.b"
 	property string tileSender
@@ -82,7 +83,42 @@ App {
 		tileSender = "";
 		letterImageUrl = "";
 
-       		var params = "grant_type=password&client_id=pwIOSApp&username=" + postnlUserid + "&password=" + postnlPassword + "&role=customer";
+			// step 1 , get static key
+
+		var xmlhttp = new XMLHttpRequest();
+		xmlhttp.open("GET", "https://jouw.postnl.nl/?pst=k-pnl_f-f_p-pnl_u-txt_s-pwb_r-pnlinlogopties_v-jouwpost", true);
+		xmlhttp.onreadystatechange = function() {
+			if (xmlhttp.readyState == XMLHttpRequest.DONE) {
+				var response = xmlhttp.responseText;
+				var i = response.indexOf("/static/");
+				var j = response.indexOf("'", i);
+				refreshPostNLDataStep2(response.substring(i + 8, j));
+			}
+		}
+		xmlhttp.send();
+	}
+
+	function refreshPostNLDataStep2(staticKey) {
+
+       		var params = "sensor_data=111111111111";
+		var xmlhttp = new XMLHttpRequest();
+		xmlhttp.open("POST", "https://jouw.postnl.nl/static/" + staticKey, true);
+        	xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        	xmlhttp.setRequestHeader("Content-length", params.length);
+        	xmlhttp.setRequestHeader("Connection", "close");
+		xmlhttp.onreadystatechange = function() {
+			if (xmlhttp.readyState == XMLHttpRequest.DONE) {
+				console.log("********* PostNL Step2 key:" + staticKey);
+				console.log("********* PostNL Step2:" + xmlhttp.responseText);
+				refreshPostNLDataStep3();
+			}
+		}
+		xmlhttp.send(params);
+	}
+
+	function refreshPostNLDataStep3() {
+
+       		var params = "grant_type=password&client_id=pwWebApp&username=" + postnlUserid + "&password=" + postnlPassword + "&role=customer";
 		var xmlhttp = new XMLHttpRequest();
 		xmlhttp.open("POST", "https://jouw.postnl.nl/web/token", true);
         	xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
@@ -90,6 +126,7 @@ App {
         	xmlhttp.setRequestHeader("Connection", "close");
 		xmlhttp.onreadystatechange = function() {
 			if (xmlhttp.readyState == XMLHttpRequest.DONE) {
+				console.log("********* PostNL step 3:" + xmlhttp.responseText);
 				accessTokenJson	= JSON.parse(xmlhttp.responseText); 
 				if (accessTokenJson['error'] !== "accountnotfound") {
 					readLetters();
@@ -106,8 +143,7 @@ App {
 		xmlhttp.open("GET", "https://jouw.postnl.nl/web/api/default/inbox", true);
        	 	xmlhttp.setRequestHeader("Authorization", "Bearer "+ accessTokenJson['access_token']);
        	 	xmlhttp.setRequestHeader("Connection", "close");
-      	 	xmlhttp.setRequestHeader("Api-Version", "4.6");
-		xmlhttp.onreadystatechange = function() {
+ 		xmlhttp.onreadystatechange = function() {
 			if (xmlhttp.readyState == XMLHttpRequest.DONE) {
 //				console.log("********* PostNL Access inbox:" + xmlhttp.responseText);
 				postNLData = JSON.parse(xmlhttp.responseText);
