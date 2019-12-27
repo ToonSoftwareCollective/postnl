@@ -183,7 +183,7 @@ Screen {
 			leftClickMargin: 3
 			bottomClickMargin: 5
 			iconSource: "qrc:/tsc/refresh.svg"
-			onClicked: app.refreshPostNLData()
+			onClicked: app.refreshPostNLToken()
 		}
 	}
 

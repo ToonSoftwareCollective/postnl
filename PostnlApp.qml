@@ -100,12 +100,15 @@ App {
 
 	function refreshPostNLDataStep2(staticKey) {
 
-       		var params = '{"sensor_data":"111111111111"}';
+//		console.log("********* PostNL static key:" + staticKey);
+
+       		var params = '{"sensor_data":"101213114115"}';
 		var xmlhttp = new XMLHttpRequest();
 		xmlhttp.open("POST", "https://jouw.postnl.nl/static/" + staticKey, true);
         	xmlhttp.setRequestHeader("Content-type", "text/plain;charset=UTF-8");
 		xmlhttp.onreadystatechange = function() {
 			if (xmlhttp.readyState == XMLHttpRequest.DONE) {
+//				console.log("********* PostNL access request step 2 response:" + xmlhttp.responseText);
 				refreshPostNLDataStep3();
 			}
 		}
@@ -122,10 +125,50 @@ App {
         	xmlhttp.setRequestHeader("Connection", "close");
 		xmlhttp.onreadystatechange = function() {
 			if (xmlhttp.readyState == XMLHttpRequest.DONE) {
-				accessTokenJson	= JSON.parse(xmlhttp.responseText); 
-				if (accessTokenJson['error'] !== "accountnotfound") {
+				var d = new Date().toLocaleTimeString();
+//				console.log("********* PostNL access request:" + d);
+//				console.log("********* PostNL access request:" + xmlhttp.responseText);
+				if (xmlhttp.responseText.indexOf("Access Denied") < 1) {
+					accessTokenJson	= JSON.parse(xmlhttp.responseText); 
+					if (accessTokenJson['error'] !== "accountnotfound") {
+						tokenRefreshTimer.start();
+						postnlTimer.stop();
+//						console.log("********* PostNL token refresh timer started");
+						readLetters();
+						readInbox();
+					}
+				} else {
+					console.log("********* PostNL app: Access Denied at " + d);
+				}
+			}
+		}
+		xmlhttp.send(params);
+	}
+
+	function refreshPostNLToken() {
+
+       		var params = "grant_type=refresh_token&client_id=pwWebApp&refresh_token=" + accessTokenJson['refresh_token'];
+		var xmlhttp = new XMLHttpRequest();
+		xmlhttp.open("POST", "https://jouw.postnl.nl/web/token", true);
+        	xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        	xmlhttp.setRequestHeader("Content-length", params.length);
+        	xmlhttp.setRequestHeader("Connection", "close");
+		xmlhttp.onreadystatechange = function() {
+			if (xmlhttp.readyState == XMLHttpRequest.DONE) {
+				var d = new Date().toLocaleTimeString();
+//				console.log("********* PostNL access refresh:" + d);
+//				console.log("********* PostNL access refresh:" + xmlhttp.responseText);
+				if (xmlhttp.responseText.indexOf("refresh_token") > 1) {
+					tokenRefreshTimer.start();
+					postnlTimer.stop();
+					accessTokenJson	= JSON.parse(xmlhttp.responseText); 
 					readLetters();
 					readInbox();
+				} else {
+					console.log("********* PostNL app token refresh failed. Trying requesting new token at:" + d);
+					tokenRefreshTimer.stop();
+					postnlTimer.start();
+					refreshPostNLData();
 				}
 			}
 		}
@@ -238,8 +281,19 @@ App {
 		running: false
 		repeat: true
 		onTriggered: {
-			interval = 7200000 //2 hours refresh rate	
+			interval = 3600000 //1 hour retry rate untill a valid access token is received	
 			refreshPostNLData()
+		}
+	}
+
+	Timer {
+		id: tokenRefreshTimer
+		interval: 1700000  // within 30 minutes
+		triggeredOnStart: false
+		running: false
+		repeat: false
+		onTriggered: {
+			refreshPostNLToken();
 		}
 	}
 }
