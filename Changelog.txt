@@ -1,3 +1,6 @@
+1.0.7
+- implemented the access token refresh functionality (to keep the app running after the first succesfull login)
+
 1.0.6
 - implemented workaround for the new security setup of postnl (thanks to glfs91)
 
