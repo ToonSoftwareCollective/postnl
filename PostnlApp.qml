@@ -18,6 +18,7 @@ App {
 	property string timeStr
 	property string dateStr
 	property bool enableSystray
+	property bool loggedIn : false
 
 	property variant accessTokenJson
 	property variant postNLData
@@ -79,7 +80,7 @@ App {
 			// clear Tile
 		tileDate =  "";
 		tileTime =  "";
-		tileBarcode = "Geen pakketten verwacht";
+		tileBarcode = "Bezig met inloggen.....";
 		tileSender = "";
 		letterImageUrl = "";
 
@@ -133,9 +134,11 @@ App {
 					if (accessTokenJson['error'] !== "accountnotfound") {
 						tokenRefreshTimer.start();
 						postnlTimer.stop();
-//						console.log("********* PostNL token refresh timer started");
+						console.log("********* PostNL token refresh timer started");
+						loggedIn = true;
+						tileBarcode = "Geen pakketten verwacht";
+						readInbox(1);
 						readLetters();
-						readInbox();
 					}
 				} else {
 					console.log("********* PostNL app: Access Denied at " + d);
@@ -162,8 +165,8 @@ App {
 					tokenRefreshTimer.start();
 					postnlTimer.stop();
 					accessTokenJson	= JSON.parse(xmlhttp.responseText); 
+					readInbox(1);
 					readLetters();
-					readInbox();
 				} else {
 					console.log("********* PostNL app token refresh failed. Trying requesting new token at:" + d);
 					tokenRefreshTimer.stop();
@@ -175,33 +178,43 @@ App {
 		xmlhttp.send(params);
 	}
 
-	function readInbox() {
+	function readInbox(attempt) {  
 
 		var xmlhttp = new XMLHttpRequest();
 		xmlhttp.open("GET", "https://jouw.postnl.nl/web/api/default/inbox", true);
-       	 	xmlhttp.setRequestHeader("Authorization", "Bearer "+ accessTokenJson['access_token']);
+       		xmlhttp.setRequestHeader("Authorization", "Bearer "+ accessTokenJson['access_token']);
        	 	xmlhttp.setRequestHeader("Connection", "close");
  		xmlhttp.onreadystatechange = function() {
 			if (xmlhttp.readyState == XMLHttpRequest.DONE) {
-				postNLData = JSON.parse(xmlhttp.responseText);
 				saveInbox(xmlhttp.responseText);
-				if (postNLData['receiver'].length > 0) {
+				var response = xmlhttp.responseText
 
-						//format tile when parcel is coming
-					if (postNLData['receiver'][0]['delivery']['status'] !== 'Delivered') {
-						if (postNLData['receiver'][0]['delivery']['timeframe']['from']) {
-							tileDate =  postNLData['receiver'][0]['delivery']['timeframe']['from'].substring(0,10);
-							tileTime =  postNLData['receiver'][0]['delivery']['timeframe']['from'].substring(11,16) +  " - " + postNLData['receiver'][0]['delivery']['timeframe']['to'].substring(11,16);
-						} else {
-							tileDate =  " ";
-							tileTime =  " ";
-						}
-						tileBarcode = postNLData['receiver'][0]['barcode'];
-						if (postNLData['receiver'][0]['sender']['companyName']) {
-							tileSender = postNLData['receiver'][0]['sender']['companyName'];
-						}
+					// check for timeout (usually happens with large inboxes at the server side), retry once
+				if (response.indexOf("InboxStatusException") > 1) {
+					console.log("********* PostNL InboxStatusException:" + attempt);
+					if (attempt == 1) {
+						readInbox(2);
 					}
-					postnlScreen.refreshScreen(); 
+				} else {
+					postNLData = JSON.parse(xmlhttp.responseText);
+					if (postNLData['receiver'].length > 0) {
+
+							//format tile when parcel is coming
+						if (postNLData['receiver'][0]['delivery']['status'] !== 'Delivered') {
+							if (postNLData['receiver'][0]['delivery']['timeframe']['from']) {
+								tileDate =  postNLData['receiver'][0]['delivery']['timeframe']['from'].substring(0,10);
+								tileTime =  postNLData['receiver'][0]['delivery']['timeframe']['from'].substring(11,16) +  " - " + postNLData['receiver'][0]['delivery']['timeframe']['to'].substring(11,16);
+							} else {
+								tileDate =  " ";
+								tileTime =  " ";
+							}
+							tileBarcode = postNLData['receiver'][0]['barcode'];
+							if (postNLData['receiver'][0]['sender']['companyName']) {
+								tileSender = postNLData['receiver'][0]['sender']['companyName'];
+							}
+						}
+						postnlScreen.refreshScreen(); 
+					}
 				}
 			}
 		}
@@ -222,26 +235,6 @@ App {
 		}
 		xmlhttp.send();
 	}
-
-	function readLetterDetails(barcode) {
-
-		letterImageUrl = "";
-		var xmlhttp = new XMLHttpRequest();
-		xmlhttp.open("GET", "https://jouw.postnl.nl/mobile/api/letters/" + barcode, true);
-       	 	xmlhttp.setRequestHeader("Authorization", "Bearer "+ accessTokenJson['access_token']);
-       	 	xmlhttp.setRequestHeader("Connection", "close");
-      	 	xmlhttp.setRequestHeader("Api-Version", "4.6");
-		xmlhttp.onreadystatechange = function() {
-			if (xmlhttp.readyState == XMLHttpRequest.DONE) {
-				letterDetails = JSON.parse(xmlhttp.responseText);
-				if (letterDetails['documents'][0]['link']) letterImageUrl = letterDetails['documents'][0]['link'];
-//				console.log("******* Postnl letter details image url:\n" + letterImageUrl);
-			}
-		}
-		xmlhttp.send();
-	}
-
-
 
 	function saveInbox(text) {
 		
@@ -276,12 +269,12 @@ App {
 
 	Timer {
 		id: postnlTimer
-		interval: 120000  // first update after 2 minutes
+		interval: 60000  // first update after 1 minutes
 		triggeredOnStart: false
 		running: false
 		repeat: true
 		onTriggered: {
-			interval = 3600000 //1 hour retry rate untill a valid access token is received	
+			interval = 600000 //10 minute retry rate untill a valid access token is received	
 			refreshPostNLData()
 		}
 	}

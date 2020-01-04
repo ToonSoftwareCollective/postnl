@@ -143,7 +143,6 @@ Screen {
 			text: actualModelText
 			font.family: qfont.semiBold.name
 			font.pixelSize: isNxt ? 25 : 20
-			color: colors.taLabelTitle
 			anchors {
 				left: parent.left
 				leftMargin: isNxt ? 25 : 20

@@ -9,14 +9,11 @@ Screen {
 	onShown: {
 		enableSystrayToggle.isSwitchedOn = app.enableSystray;
 		postnlUseridLabel.inputText = app.postnlUserid;
+		postnlPassword.inputText = "**********";
 		addCustomTopRightButton("Opslaan");
 	}
 
 	onCustomButtonClicked: {
-		app.postNLData = {};
-		app.lettersData = {};
-		app.tileBarcode = 'Geen Pakketten gevonden';
-		app.tileSender = '';
 		app.saveSettings();
 		app.refreshPostNLData();
 		hide();

@@ -10,7 +10,12 @@ SystrayIcon {
 	visible: app.enableSystray
 
 	onClicked: {
-		if (app.postnlScreen) app.postnlScreen.show();
+		if (app.loggedIn) {
+			stage.openFullscreen(app.postnlScreenUrl);
+		} else {
+			qdialog.showDialog(qdialog.SizeSmall, "PostNL app mededeling", "Wachten op succesvolle aanmelding bij PostNL.\nDit kan enige tijd duren." , "Sluiten");
+			stage.openFullscreen(app.postnlConfigurationScreenUrl);
+		}
 	}
 
 	Image {

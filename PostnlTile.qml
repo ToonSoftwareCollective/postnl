@@ -6,7 +6,12 @@ Tile {
 	id: postnlTile
 
 	onClicked: {
-		stage.openFullscreen(app.postnlScreenUrl);
+		if (app.loggedIn) {
+			stage.openFullscreen(app.postnlScreenUrl);
+		} else {
+			qdialog.showDialog(qdialog.SizeSmall, "PostNL app mededeling", "Wachten op succesvolle aanmelding bij PostNL.\nDit kan enige tijd duren." , "Sluiten");
+			stage.openFullscreen(app.postnlConfigurationScreenUrl);
+		}
 	}
 
 	Text {

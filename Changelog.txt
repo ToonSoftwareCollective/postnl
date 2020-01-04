@@ -1,3 +1,7 @@
+1.0.8
+- implemented a retry reading the inbox (in case of a timeout at the server side due to large inboxes)
+- showing login status on the tile at startup
+
 1.0.7
 - implemented the access token refresh functionality (to keep the app running after the first succesfull login)
 
