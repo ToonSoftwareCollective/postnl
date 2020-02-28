@@ -7,7 +7,6 @@ Screen {
 	screenTitle: "Recente PostNL pakketten"
 
 	property string actualModelText : "Pakketpost:"
-	property string selectModelButtonText : "Brievenbuspost"
 
 	function formatDeliveryDate(dateString) {
 		return dateString.substring(0, 10) + " " + dateString.substring(11,16);
@@ -39,23 +38,9 @@ Screen {
 	}
 
 	function refreshScreen() {
-
 		refreshPostnlModel();
-		refreshLetterModel();
 	}
 
-	function refreshLetterModel() {
-
-		letterModel.clear();
-
-			// get incoming letter dates
-
-		for (var i = 0; i < app.lettersData.length; i++) {
-			letterModel.append({deliveryDate: app.lettersData[i]['expectedDeliveryDate'].substring(0,10), barcode: app.lettersData[i]['barcode']});
-		}
-
-		app.readLetterDetails(app.lettersData[0]['barcode']);
-	}
 
 	function refreshPostnlModel() {
 
@@ -150,29 +135,6 @@ Screen {
 			}
 		}
 
-		StandardButton {
-			id: btnConfigScreen
-			width: isNxt ? 190 : 150
-			text: selectModelButtonText
-			anchors.right: refreshButton.left
-			anchors.bottom: parent.bottom
-			anchors.rightMargin: 10
-			leftClickMargin: 3
-			bottomClickMargin: 5
-			onClicked: {
-				if (postnlGridView.visible) {
-					postnlGridView.visible = false
-					letterGridView.visible = true;
-					selectModelButtonText = "Pakketpost";
-					actualModelText = "Brievenbuspost:";
-				} else {
-					postnlGridView.visible = true;
-					letterGridView.visible = false;
-					selectModelButtonText = "Brievenbuspost";
-					actualModelText = "Pakketpost:";
-				}
-			}
-		}
 
 		IconButton {
 			id: refreshButton
