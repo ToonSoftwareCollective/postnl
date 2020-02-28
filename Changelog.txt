@@ -1,3 +1,8 @@
+1.1.0
+- removed login functionality from the app.
+  inbox data is now retrieved via the seperate script from glsf91 (great job!)
+- removed letter functionality (not supported by the new script)
+
 1.0.8
 - implemented a retry reading the inbox (in case of a timeout at the server side due to large inboxes)
 - showing login status on the tile at startup
