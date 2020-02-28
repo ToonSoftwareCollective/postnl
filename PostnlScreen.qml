@@ -29,8 +29,6 @@ Screen {
 
 			// add settingsscreen button
 		addCustomTopRightButton("Instellingen");
-
-		refreshScreen();
 	}
 
 	onCustomButtonClicked: {

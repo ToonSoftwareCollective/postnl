@@ -81,7 +81,7 @@ App {
 			// clear Tile
 		tileDate =  "";
 		tileTime =  "";
-		tileBarcode = "Bezig met inloggen.....";
+		tileBarcode = "Geen pakketten verwacht";
 		tileSender = "";
 
 			// step 1 , get static key
