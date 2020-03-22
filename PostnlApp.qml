@@ -63,6 +63,7 @@ App {
 		} catch(e) {
 		}
 
+		postnlDataRefreshTimer.start();
 		postnlTimer.start();
 	}
 
@@ -134,13 +135,27 @@ App {
 
 	Timer {
 		id: postnlTimer
-		interval: 60000  // first update after 1 minutes
+		interval: 180000  // first update after 3 minutes
 		triggeredOnStart: false
 		running: false
 		repeat: true
 		onTriggered: {
-			interval = 3600000 //1 hour refresh rate (note input file is only refreshed every hour, so display can be delayed by two hours)	
+			interval = 7200000 //2 hour refresh rate (note input file is only refreshed every hour, so display can be delayed by two hours)	
 			refreshPostNLData()
+		}
+	}
+
+	Timer {
+		id: postnlDataRefreshTimer
+		interval: 60000  // first update after 1 minutes
+		triggeredOnStart: false
+		running: false
+		repeat: true
+		onTriggered: {	// request tsc script to retrieve postnl inbox
+			interval = 7200000 //2 hour refresh rate	
+ 			var doc4 = new XMLHttpRequest();
+  			doc4.open("PUT", "file:///tmp/tsc.command");
+   			doc4.send("postnl");
 		}
 	}
 }
