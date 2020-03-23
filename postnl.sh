@@ -267,7 +267,7 @@ fi
 
 ACCESSCODE=`grep -o '"access_token":"[^"]*' $RESPFILE | grep -o '[^"]*$'`
 # echo "Access_code: $ACCESSCODE"
-# echo -n $ACCESSCODE > $ACCESSCODEFILE
+echo -n $ACCESSCODE > $ACCESSCODEFILE
 
 # Step 5
 
