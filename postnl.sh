@@ -155,7 +155,7 @@ cd $TMPDIR
 #if accesscode is less then 60 minutes old, reuse it. If older or not exist, start from beginning.
 if [ -f $ACCESSCODEFILE ] && ! $FORCELOGIN
 then
-	if [ `stat -c %Y $ACCESSCODEFILE` -ge $(( `date +%s` - 3500 )) ]
+	if [ -n "$(find $ACCESSCODEFILE  -mmin -60 -type f)" ]
 	then 
 		echo "Found recent accesscode. Re-use this accesscode."
 		readInbox $ACCESSCODEFILE
