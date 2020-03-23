@@ -275,7 +275,7 @@ readInbox $ACCESSCODEFILE
 
 
 #Remove response files.
-#rm $TMPDIR/postnl-resp?.tmp
+rm $TMPDIR/postnl-resp?.tmp
 
 # Done
 
