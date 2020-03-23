@@ -1,3 +1,7 @@
+1.1.1
+- integrated the separate script from glfs91 into the app.
+  no manual intervention needed anymore.
+
 1.1.0
 - removed login functionality from the app.
   inbox data is now retrieved via the seperate script from glsf91 (great job!)
