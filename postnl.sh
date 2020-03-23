@@ -7,15 +7,15 @@
 
 # end USER SETTINGS
 
-echo "==================================================================================================================================================================="
-echo "This script can be used to get a json with Track & Trace of packages of Postnl."
-echo "You need a postnl account to use this script"
-echo ""
-echo "Version: 1.0  - glsf91 - 28-2-2020"
-echo ""
-echo "DON'T RUN this script to many times in a hour. Use at our own risk."
-echo "==================================================================================================================================================================="
-echo ""
+# "==================================================================================================================================================================="
+# "This script can be used to get a json with Track & Trace of packages of Postnl."
+# "You need a postnl account to use this script"
+# 
+# "Version: 1.0  - glsf91 - 28-2-2020"
+#
+# "DON'T RUN this script to many times in a hour. Use at our own risk."
+# "==================================================================================================================================================================="
+# ""
 
 usage() {
         echo ""
@@ -95,19 +95,19 @@ while getopts "u:p:d:fh" opt $PROGARGS
 do
 	case $opt in
 		u)
-			echo "Set username: $OPTARG"
+#			echo "Set username: $OPTARG"
 			USERNAME=$OPTARG
 			;;
 		p)
-			echo "Set password: $OPTARG"
+#			echo "Set password: $OPTARG"
 			PASSWORD=$OPTARG
 			;;
 		d)
-			echo "Set directory for temporary files: $OPTARG"
+#			echo "Set directory for temporary files: $OPTARG"
 			TMPDIR=$OPTARG
 			;;
 		f)
-			echo "Set force login"
+#			echo "Set force login"
 			FORCELOGIN=true
 			;;
 		h)  usage
@@ -190,7 +190,7 @@ then
 	exit 1
 fi
 
-echo "RequestVerificationToken: $REQUESTVERIFICATIONTOKEN"
+# echo "RequestVerificationToken: $REQUESTVERIFICATIONTOKEN"
 
 # Step 2
 
@@ -208,13 +208,13 @@ fi
 
 RANDOM=`dd bs=32 count=1 status=none </dev/urandom`
 CODEVERIFIER=`echo -n $RANDOM | hexdump -e '32/1 "%02x""\n"'`
-echo "CodeVerifier: $CODEVERIFIER"
+# echo "CodeVerifier: $CODEVERIFIER"
 TMP1=`echo -n "$CODEVERIFIER" | sha256sum | sed 's/\([0-9,a-z]*\).*/\1/' |  perl -pe 's/([0-9a-f]{2})/chr hex $1/gie' |dd bs=32 count=1 status=none | openssl base64`
 CODECHALLENGE=`echo -n $TMP1 | sed -e 's/\+/-/g' -e 's/\//_/g' -e 's/=//g'`
-echo "codeChallenge: $CODECHALLENGE"
+# echo "codeChallenge: $CODECHALLENGE"
 
 STATEVALUE=`dd bs=32 count=1 </dev/urandom status=none | hexdump -e '32/1 "%02x""\n"'`
-echo "stateValue: $STATEVALUE"
+# echo "stateValue: $STATEVALUE"
 
 
 # Step 3
@@ -240,7 +240,7 @@ then
 fi
 
 CODE=`echo -n $OUTPUTCURL | sed 's/.*code=\(.*\)\&scope.*/\1/'`
-echo "Code: $CODE"
+# echo "Code: $CODE"
 
 
 # Step 4
@@ -266,8 +266,8 @@ then
 fi
 
 ACCESSCODE=`grep -o '"access_token":"[^"]*' $RESPFILE | grep -o '[^"]*$'`
-echo "Access_code: $ACCESSCODE"
-echo -n $ACCESSCODE > $ACCESSCODEFILE
+# echo "Access_code: $ACCESSCODE"
+# echo -n $ACCESSCODE > $ACCESSCODEFILE
 
 # Step 5
 
