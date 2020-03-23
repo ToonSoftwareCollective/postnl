@@ -209,7 +209,7 @@ fi
 RANDOM=`dd bs=32 count=1 status=none </dev/urandom`
 CODEVERIFIER=`echo -n $RANDOM | hexdump -e '32/1 "%02x""\n"'`
 # echo "CodeVerifier: $CODEVERIFIER"
-TMP1=`echo -n "$CODEVERIFIER" | sha256sum | sed 's/\([0-9,a-z]*\).*/\1/' |  perl -pe 's/([0-9a-f]{2})/chr hex $1/gie' |dd bs=32 count=1 status=none | openssl base64`
+TMP1=`echo -n "$CODEVERIFIER" | openssl dgst -sha256 -binary | openssl base64`
 CODECHALLENGE=`echo -n $TMP1 | sed -e 's/\+/-/g' -e 's/\//_/g' -e 's/=//g'`
 # echo "codeChallenge: $CODECHALLENGE"
 
