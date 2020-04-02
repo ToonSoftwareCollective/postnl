@@ -12,7 +12,7 @@ Tile {
 	Text {
 		id: txtBarcode
 		text: app.tileBarcode
-		color: colors.clockTileColor
+		color: (typeof dimmableColors !== 'undefined') ? dimmableColors.clockTileColor : colors.clockTileColor
 		anchors {
 			baseline: parent.top
 			baselineOffset: isNxt ? 50 : 40
@@ -25,7 +25,7 @@ Tile {
 	Text {
 		id: txtSender
 		text: (app.tileSender.length > 2) ? "Van: " + app.tileSender : "via PostNL"
-		color: colors.clockTileColor
+		color: (typeof dimmableColors !== 'undefined') ? dimmableColors.clockTileColor : colors.clockTileColor
 		anchors {
 			top: txtBarcode.bottom
 			horizontalCenter: parent.horizontalCenter
@@ -37,7 +37,7 @@ Tile {
 	Text {
 		id: txtDate
 		text: (app.tileDate.length > 5) ? "Verwacht op " + app.tileDate : app.tileDate
-		color: colors.clockTileColor
+		color: (typeof dimmableColors !== 'undefined') ? dimmableColors.clockTileColor : colors.clockTileColor
 		anchors {
 			baseline: parent.top
 			baselineOffset: isNxt ? 120 : 95
@@ -51,7 +51,7 @@ Tile {
 	Text {
 		id: txtTime
 		text: app.tileTime
-		color: colors.clockTileColor
+		color: (typeof dimmableColors !== 'undefined') ? dimmableColors.clockTileColor : colors.clockTileColor
 		anchors {
 			top: txtDate.bottom
 			horizontalCenter: parent.horizontalCenter
