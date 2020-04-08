@@ -6,7 +6,7 @@ Screen {
 	id: postnlScreen
 	screenTitle: "Recente PostNL pakketten"
 
-	property string actualModelText : "Pakketpost:"
+	property string actualModelText : "Pakketpost van de afgelopen 3 maanden:"
 
 	function formatDeliveryDate(dateString) {
 		return dateString.substring(0, 10) + " " + dateString.substring(11,16);
@@ -47,6 +47,21 @@ Screen {
 		var shipmentDate = "";
 		var shipmentSender = "";
 		var shipmentTitle = "";
+			// calculate date 2 months back
+
+		var now = new Date();
+		var thisMonth = now.getMonth();
+    		now.setMonth(thisMonth - 3);		// 3 months in the past
+
+		var strMon = now.getMonth() + 1;
+		if (strMon < 10) {
+			strMon = "0" + strMon;
+		}
+		var strDay = now.getDate();
+		if (strDay < 10) {
+			strDay = "0" + strDay;
+		}
+		var cutoffDate = now.getFullYear() + "-" + strMon + "-" +  strDay;
 
 			// get incoming shipments
 
@@ -69,18 +84,19 @@ Screen {
 				}
 			}
 
-				// determine sender
-			if (app.postNLData['receiver'][i]['sender']) {
-				if (app.postNLData['receiver'][i]['sender']['companyName']) {
-					shipmentSender = app.postNLData['receiver'][i]['sender']['companyName'] + "  (" + app.postNLData['receiver'][i]['sender']['town'] + ")";
+			if (cutoffDate < shipmentDate.substring(0,10)) {
+					// determine sender
+				if (app.postNLData['receiver'][i]['sender']) {
+					if (app.postNLData['receiver'][i]['sender']['companyName']) {
+						shipmentSender = app.postNLData['receiver'][i]['sender']['companyName'] + "  (" + app.postNLData['receiver'][i]['sender']['town'] + ")";
+					} else {
+						shipmentSender = app.postNLData['receiver'][i]['sender']['lastName'] + " (" + app.postNLData['receiver'][i]['sender']['town'] + ")";
+					}
 				} else {
-					shipmentSender = app.postNLData['receiver'][i]['sender']['lastName'] + " (" + app.postNLData['receiver'][i]['sender']['town'] + ")";
+					shipmentSender = "onbekende afzender";
 				}
-			} else {
-				shipmentSender = "onbekende afzender";
+				postnlModel.append({deliveryDate: shipmentDate, deliveryInfo: formatDelivery(app.postNLData['receiver'][i]['delivery']['status'], shipmentDate), barcode: app.postNLData['receiver'][i]['barcode'], senderInfo: shipmentTitle + shipmentSender});
 			}
-
-			postnlModel.append({deliveryDate: shipmentDate, deliveryInfo: formatDelivery(app.postNLData['receiver'][i]['delivery']['status'], shipmentDate), barcode: app.postNLData['receiver'][i]['barcode'], senderInfo: shipmentTitle + shipmentSender});
 		}
 
 			// add outgoing shipments
@@ -96,7 +112,9 @@ Screen {
 					shipmentDate = "";
 				}
 			}
-			postnlModel.append({deliveryDate: shipmentDate, deliveryInfo: formatDelivery(app.postNLData['sender'][j]['delivery']['status'], shipmentDate), barcode: app.postNLData['sender'][j]['barcode'], senderInfo: "Verstuurd naar " + app.postNLData['sender'][j]['originalReceiver']['street'] + " " + app.postNLData['sender'][j]['originalReceiver']['houseNumber'] + ", " + app.postNLData['sender'][j]['originalReceiver']['town']});
+			if (cutoffDate < shipmentDate.substring(0,10)) {
+				postnlModel.append({deliveryDate: shipmentDate, deliveryInfo: formatDelivery(app.postNLData['sender'][j]['delivery']['status'], shipmentDate), barcode: app.postNLData['sender'][j]['barcode'], senderInfo: "Verstuurd naar " + app.postNLData['sender'][j]['originalReceiver']['street'] + " " + app.postNLData['sender'][j]['originalReceiver']['houseNumber'] + ", " + app.postNLData['sender'][j]['originalReceiver']['town']});
+			}
 		}
 
 			// sort on deliverydate
@@ -142,7 +160,7 @@ Screen {
 			leftClickMargin: 3
 			bottomClickMargin: 5
 			iconSource: "qrc:/tsc/refresh.svg"
-			onClicked: app.refreshPostNLToken()
+			onClicked: app.refreshPostNLData()
 		}
 	}
 
