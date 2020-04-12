@@ -11,7 +11,7 @@
 # "This script can be used to get a json with Track & Trace of packages of Postnl."
 # "You need a postnl account to use this script"
 # 
-# "Version: 1.0  - glsf91 - 28-2-2020"
+# "Version: 1.1  - glsf91 - 10-4-2020"
 #
 # "DON'T RUN this script to many times in a hour. Use at our own risk."
 # "==================================================================================================================================================================="
@@ -75,6 +75,7 @@ readInbox() {
 	then
 		cp $RESPFILE $INBOXFILE
 		echo "Succeeded: inbox json received from postnl"
+		echo "`date '+%Y-%m-%d %H:%m:%S'`" > $TMPDIR/lastupdate.log
 	else
 		echo "Warning: succeeded but empty json received for inbox request."
 		echo "Previous json file will not be replaced."
@@ -179,7 +180,7 @@ removeFile $RESPFILE
 STATUSCODE=`curl $PROXY -w "\n%{http_code}" -o $RESPFILE -k -s -b non-existing -c $COOKIEFILE https://jouw.postnl.nl/identity/Account/Login`
 if [ ! $STATUSCODE = "200" ]
 then
-	echo "Error: Wrong responsecode $STATUSCODE received from Account/Login 1st request. See $RESPFILE. Aborting."
+	echo "Error: Wrong responsecode $STATUSCODE received from Account/Login step 1 request. See $RESPFILE. Aborting."
 	exit 1
 fi
 
@@ -192,15 +193,52 @@ fi
 
 # echo "RequestVerificationToken: $REQUESTVERIFICATIONTOKEN"
 
+URLWITHSTATIC=`cat $RESPFILE | tr '\n' '\r' | sed "s/.*src=\"\([^\"]*\).*/\1/"` 
+if [ ${#URLWITHSTATIC} -lt 35 ] || [ ${#URLWITHSTATIC} -gt 50 ]
+then 
+	echo "Error: UrlWithStatic has wrong size. Aborting."
+	exit 1
+fi
+
+echo "UrlWithStatic: $URLWITHSTATIC"
+
+
 # Step 2
 
 RESPFILE="$TMPDIR/postnl-resp2.tmp"
 removeFile $RESPFILE
 
-STATUSCODE=`curl $PROXY -w "\n%{http_code}" -o $RESPFILE -k -s -b $COOKIEFILE -c $COOKIEFILE -L -d "ReturnUrl=&Username=$USERNAME&Password=$PASSWORD&button=login&__RequestVerificationToken=$REQUESTVERIFICATIONTOKEN"  https://jouw.postnl.nl/identity/Account/login`
+RANDOMSENSORDATA=`dd bs=11 count=1 status=none </dev/urandom | hexdump -e '11/1 "%02x""\n"'`
+
+STATUSCODE=`curl $PROXY -w "\n%{http_code}" -o $RESPFILE -k -s -b $COOKIEFILE -c $COOKIEFILE --request POST --header 'Content-Type: text/plain' --data-raw '{"sensor_data":"'$RANDOMSENSORDATA'1.54-1,2,-94,-100,Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}'  https://jouw.postnl.nl/$URLWITHSTATIC`
+if [ ! $STATUSCODE = "201" ]
+then
+	echo "Error: Wrong responsecode $STATUSCODE received from static step 2 request. See $RESPFILE. Aborting."
+	exit 1
+fi
+
+if ! grep -q "{\"success\":true}" $RESPFILE
+then
+	echo "Error: No success: true received from static request. See $RESPFILE. Aborting."
+	exit 1
+fi
+
+
+# Step 3
+
+RESPFILE="$TMPDIR/postnl-resp3.tmp"
+removeFile $RESPFILE
+
+STATUSCODE=`curl $PROXY -i -w "\n%{http_code}" -o $RESPFILE -k -s -b $COOKIEFILE -c $COOKIEFILE -L -d "ReturnUrl=&Username=$USERNAME&Password=$PASSWORD&button=login&__RequestVerificationToken=$REQUESTVERIFICATIONTOKEN"  https://jouw.postnl.nl/identity/Account/login`
 if [ ! $STATUSCODE = "200" ]
 then
-	echo "Error: Wrong responsecode $STATUSCODE received from Account/Login 2nd request. See $RESPFILE. Aborting."
+	echo "Error: Wrong responsecode $STATUSCODE received from Account/Login step 3 request. See $RESPFILE. Aborting."
+	exit 1
+fi
+
+if grep -q "?botdetected=true" $RESPFILE
+then
+	echo "Error: Request is detetcted as a bot. After a while it will work again. See $RESPFILE. Aborting."
 	exit 1
 fi
 
@@ -217,9 +255,9 @@ STATEVALUE=`dd bs=32 count=1 </dev/urandom status=none | hexdump -e '32/1 "%02x"
 # echo "stateValue: $STATEVALUE"
 
 
-# Step 3
+# Step 4
 
-RESPFILE="$TMPDIR/postnl-resp3.tmp"
+RESPFILE="$TMPDIR/postnl-resp4.tmp"
 removeFile $RESPFILE
 
 OUTPUTCURL=`curl $PROXY -i -o $RESPFILE -k -b $COOKIEFILE -c $COOKIEFILE -s -L -w %{url_effective} "https://jouw.postnl.nl/identity/connect/authorize?client_id=pwb-web&audience=poa-profiles-api&scope=openid%20profile%20email%20poa-profiles-api%20pwb-web-api&response_type=code&code_challenge_method=S256&code_challenge=$CODECHALLENGE&prompt=none&state=$STATEVALUE&redirect_uri=https://jouw.postnl.nl/silent-renew.html&ui_locales=nl_NL"`
@@ -243,9 +281,9 @@ CODE=`echo -n $OUTPUTCURL | sed 's/.*code=\(.*\)\&scope.*/\1/'`
 # echo "Code: $CODE"
 
 
-# Step 4
+# Step 5
 
-RESPFILE="$TMPDIR/postnl-resp4.tmp"
+RESPFILE="$TMPDIR/postnl-resp5.tmp"
 removeFile $RESPFILE
 
 STATUSCODE=`curl $PROXY -w "\n%{http_code}" -k -o $RESPFILE -b $COOKIEFILE -c $COOKIEFILE -s -d "grant_type=authorization_code&client_id=pwb-web&code=$CODE&code_verifier=$CODEVERIFIER&redirect_uri=https%3A%2F%2Fjouw.postnl.nl%2Fsilent-renew.html"  https://jouw.postnl.nl/identity/connect/token`
@@ -269,7 +307,7 @@ ACCESSCODE=`grep -o '"access_token":"[^"]*' $RESPFILE | grep -o '[^"]*$'`
 # echo "Access_code: $ACCESSCODE"
 echo -n $ACCESSCODE > $ACCESSCODEFILE
 
-# Step 5
+# Step 6
 
 readInbox $ACCESSCODEFILE
 
@@ -278,8 +316,3 @@ readInbox $ACCESSCODEFILE
 rm $TMPDIR/postnl-resp?.tmp
 
 # Done
-
-
-
-
-
