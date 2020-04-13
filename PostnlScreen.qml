@@ -198,6 +198,7 @@ Screen {
 		Text {
 			id: updatedText
 			text: "(bijgewerkt op: " + lastupdate + ")"
+			width: parent.width
 			anchors {
 				bottom: parent.bottom
 				right: parent.right
