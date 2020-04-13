@@ -90,11 +90,12 @@ Screen {
 		var shipmentDate = "";
 		var shipmentSender = "";
 		var shipmentTitle = "";
-			// calculate date 2 months back
+
+			// calculate date 1 month back
 
 		var now = new Date();
 		var thisMonth = now.getMonth();
-    		now.setMonth(thisMonth - 3);		// 3 months in the past
+    		now.setMonth(thisMonth - 1);		// 1 month in the past
 
 		var strMon = now.getMonth() + 1;
 		if (strMon < 10) {
@@ -194,31 +195,18 @@ Screen {
 			}
 		}
 
-
-		IconButton {
-			id: refreshButton
-			anchors.right: parent.right
-			anchors.rightMargin: isNxt ? 50 : 40
-			anchors.bottom: parent.bottom
-			leftClickMargin: 3
-			bottomClickMargin: 5
-			iconSource: "qrc:/tsc/refresh.svg"
-			onClicked: app.refreshPostNLData()
-		}
-	}
-
-	Text {
-		id: footer
-		text: "Laatste gelukte inbox update: " + lastupdate
-		anchors {
-			baseline: parent.bottom
-			baselineOffset: -5
-			right: parent.right
-			rightMargin: 15
-		}
-		font {
-			pixelSize: isNxt ? 18 : 15
-			family: qfont.italic.name
+		Text {
+			id: footer
+			text: "(bijgewerkt op: " + lastupdate + ")"
+			anchors {
+				bottom: headerText.bottom
+				right: parent.right
+				rightMargin: isNxt ? 20 : 16
+			}
+			font {
+				pixelSize: isNxt ? 18 : 15
+				family: qfont.italic.name
+			}
 		}
 	}
 
