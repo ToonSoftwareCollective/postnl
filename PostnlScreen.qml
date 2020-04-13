@@ -7,7 +7,7 @@ Screen {
 	id: postnlScreen
 	screenTitle: "Recente PostNL pakketten"
 
-	property string actualModelText : "Pakketpost van de afgelopen 3 maanden:"
+	property string actualModelText : "Pakketpost van de afgelopen maand:"
 	property string lastupdate
 
 	FileIO {
@@ -197,8 +197,7 @@ Screen {
 
 		Text {
 			id: updatedText
-			text: "(bijgewerkt op: " + lastupdate + ")"
-			width: parent.width
+			text: "bijgewerkt op: " + lastupdate
 			anchors {
 				bottom: parent.bottom
 				right: parent.right
