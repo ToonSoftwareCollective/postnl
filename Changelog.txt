@@ -2,7 +2,7 @@
 - showing last succesfull inbox retrieval in the screen footer
 - only show packages from the last three months to improve performance
 - significantly reduced memory footprint of the app, just only need some memory now when processing the inbox
-  
+- inbox retrieval improved by implementing anti-bot detection by glsf91
 
 1.1.2
 - dimmableColors update
