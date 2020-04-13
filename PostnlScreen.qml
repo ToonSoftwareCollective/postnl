@@ -54,7 +54,8 @@ Screen {
 
 	function refreshPostnlModel() {
 
-		lastupdate = lastupdateFile.read();
+		var lastupdateText = lastupdateFile.read();
+		lastupdate = lastupdateText.substring(0,16) + "  ";
 
 			// clear Tile
 		app.tileDate =  "";
