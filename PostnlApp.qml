@@ -19,12 +19,8 @@ App {
 	property string dateStr
 	property bool enableSystray
 
-	property variant accessTokenJson
-	property variant postNLData
-
 	property string postnlUserid
 	property string postnlPassword
-	property string staticKey
 
 	property string tileBarcode : "even geduld a.u.b"
 	property string tileSender
@@ -43,10 +39,6 @@ App {
 		source: "file:///mnt/data/tsc/postnl.userSettings.json"
  	}
 
-	FileIO {
-		id: postnlInboxFile
-		source: "file:///tmp/postnl/POSTNL-Inbox.json"
- 	}
 
 	Component.onCompleted: {
 		// read user settings
@@ -65,6 +57,9 @@ App {
 
 		postnlDataRefreshTimer.start();
 		postnlTimer.start();
+
+		lastupdate = lastupdateFile.read();
+
 	}
 
 	// Postnl signals, used to update the listview and filter enabled button
@@ -75,38 +70,6 @@ App {
 		registry.registerWidget("screen", postnlScreenUrl, this, "postnlScreen");
 		registry.registerWidget("screen", postnlConfigurationScreenUrl, this, "postnlConfigurationScreen");
 		registry.registerWidget("systrayIcon", trayUrl, this, "postnlTray");
-	}
-
-	function refreshPostNLData() {
-
-			// clear Tile
-		tileDate =  "";
-		tileTime =  "";
-		tileBarcode = "Geen pakketten verwacht";
-		tileSender = "";
-
-			// step 1 , get static key
-
-		var xmlhttp = new XMLHttpRequest();
-		postNLData = JSON.parse(postnlInboxFile.read());
-		if (postNLData['receiver'].length > 0) {
-
-				//format tile when parcel is coming
-			if (postNLData['receiver'][0]['delivery']['status'] !== 'Delivered') {
-				if (postNLData['receiver'][0]['delivery']['timeframe']['from']) {
-					tileDate =  postNLData['receiver'][0]['delivery']['timeframe']['from'].substring(0,10);
-					tileTime =  postNLData['receiver'][0]['delivery']['timeframe']['from'].substring(11,16) +  " - " + postNLData['receiver'][0]['delivery']['timeframe']['to'].substring(11,16);
-				} else {
-					tileDate =  " ";
-					tileTime =  " ";
-				}
-				tileBarcode = postNLData['receiver'][0]['barcode'];
-				if (postNLData['receiver'][0]['sender']['companyName']) {
-					tileSender = postNLData['receiver'][0]['sender']['companyName'];
-				}
-			}
-			postnlScreen.refreshScreen(); 
-		}
 	}
 
 	function saveSettings() {
@@ -141,7 +104,7 @@ App {
 		repeat: true
 		onTriggered: {
 			interval = 7200000 //2 hour refresh rate (note input file is only refreshed every hour, so display can be delayed by two hours)	
-			refreshPostNLData()
+			postnlScreen.refreshScreen(); 
 		}
 	}
 
