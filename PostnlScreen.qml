@@ -196,12 +196,11 @@ Screen {
 		}
 
 		Text {
-			id: footer
+			id: updatedText
 			text: "(bijgewerkt op: " + lastupdate + ")"
 			anchors {
-				bottom: headerText.bottom
+				bottom: parent.bottom
 				right: parent.right
-				rightMargin: isNxt ? 20 : 16
 			}
 			font {
 				pixelSize: isNxt ? 18 : 15
