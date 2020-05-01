@@ -1,3 +1,6 @@
+1.1.6
+- improved anti-bot detection
+
 1.1.5
 - showing last succesfull inbox retrieval in the screen footer
 - only show packages from the last month to improve performance
