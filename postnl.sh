@@ -11,7 +11,7 @@
 # "This script can be used to get a json with Track & Trace of packages of Postnl."
 # "You need a postnl account to use this script"
 # 
-# "Version: 1.1  - glsf91 - 10-4-2020"
+# "Version: 1.2  - glsf91 - 1-5-2020"
 #
 # "DON'T RUN this script to many times in a hour. Use at our own risk."
 # "==================================================================================================================================================================="
@@ -210,7 +210,7 @@ removeFile $RESPFILE
 
 RANDOMSENSORDATA=`dd bs=11 count=1 status=none </dev/urandom | hexdump -e '11/1 "%02x""\n"'`
 
-STATUSCODE=`curl $PROXY -w "\n%{http_code}" -o $RESPFILE -k -s -b $COOKIEFILE -c $COOKIEFILE --request POST --header 'Content-Type: text/plain' --data-raw '{"sensor_data":"'$RANDOMSENSORDATA'1.54-1,2,-94,-100,Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}'  https://jouw.postnl.nl/$URLWITHSTATIC`
+STATUSCODE=`curl $PROXY -w "\n%{http_code}" -o $RESPFILE -k -s -b $COOKIEFILE -c $COOKIEFILE --request POST --header 'Expect:' --header 'Content-Type: text/plain' --data-raw '{"sensor_data":"'$RANDOMSENSORDATA'1.54-1,2,-94,-100,Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36,uaend,12147,20030107,en-US,Gecko,3,0,0,0,390320,2639919,1920,1160,1920,1200,1778,965,1794,,cpen:0,i1:0,dm:0,cwen:0,non:1,opc:0,fc:0,sc:0,wrc:1,isc:0,vib:1,bat:1,x11:0,x12:1,8334,0.517452032258,793181319959.5,loc:-1,2,-94,-101,do_en,dm_en,t_en-1,2,-94,-105,0,-1,0,0,864,832,0;1,0,0,0,883,851,0;-1,2,-94,-102,0,-1,0,0,864,832,0;1,0,0,0,883,851,0;-1,2,-94,-108,-1,2,-94,-110,-1,2,-94,-117,-1,2,-94,-111,-1,2,-94,-109,-1,2,-94,-114,-1,2,-94,-103,-1,2,-94,-112,https://jouw.postnl.nl/identity/Account/Login-1,2,-94,-115,1,32,32,0,0,0,0,1,0,1586362639919,-999999,16970,0,0,2828,0,0,3,0,0,B5B13FCDF4CA36C7D95DCC2A23DE191A~-1~YAAQDk5lX22iFDpxAQAApeOUWgO7v0AjsdlFKoX+6HQsg8w34qbHV5uqhWQDQ+mBZtaqUOQ0dH9nvZCDqxUeua/VxcrKJV6UEnpiVKtc/toBhuGBK5H95xDMtfB4HxcBesbqctyj1TsB5Kdg7muJ3P7sWOR/49n4c5O3gO74zdQWhHPGQpPI81z7vynNzrsagRpaH+6eojAeufTm/uzqGq7QZR/eoXe/iN6yPmCR9s6u+3twyemZty27C4vuyhbAdDvQDoe65qof6ADb2APRVSqEMUnn3tiT/kFHgKR39U2QFZQN1gVJLLU=~-1~-1~-1,29634,-1,-1,30261693-1,2,-94,-106,0,0-1,2,-94,-119,-1-1,2,-94,-122,0,0,0,0,1,0,0-1,2,-94,-123,-1,2,-94,-124,-1,2,-94,-126,-1,2,-94,-127,-1,2,-94,-70,-1-1,2,-94,-80,94-1,2,-94,-116,2639947-1,2,-94,-118,79837-1,2,-94,-121,;4;-1;0"}'  https://jouw.postnl.nl$URLWITHSTATIC`
 if [ ! $STATUSCODE = "201" ]
 then
 	echo "Error: Wrong responsecode $STATUSCODE received from static step 2 request. See $RESPFILE. Aborting."
