@@ -11,7 +11,7 @@
 # "This script can be used to get a json with Track & Trace of packages of Postnl."
 # "You need a postnl account to use this script"
 # 
-# "Version: 1.1  - glsf91 - 10-4-2020"
+# "Version: 1.2  - glsf91 - 1-5-2020"
 #
 # "DON'T RUN this script to many times in a hour. Use at our own risk."
 # "==================================================================================================================================================================="
