@@ -75,7 +75,7 @@ readInbox() {
 	then
 		cp $RESPFILE $INBOXFILE
 		echo "Succeeded: inbox json received from postnl"
-		echo "`date '+%Y-%m-%d %H:%m:%S'`" > $TMPDIR/lastupdate.log
+		echo "`date '+%Y-%m-%d %H:%M:%S'`" > $TMPDIR/lastupdate.log
 	else
 		echo "Warning: succeeded but empty json received for inbox request."
 		echo "Previous json file will not be replaced."
