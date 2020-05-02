@@ -1,5 +1,6 @@
 1.1.7
-- made update frequence configurable
+- made update frequency configurable
+- configurable number of months of history to show on screen
 
 1.1.6
 - improved anti-bot detection

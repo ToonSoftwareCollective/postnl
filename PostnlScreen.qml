@@ -7,7 +7,7 @@ Screen {
 	id: postnlScreen
 	screenTitle: "Recente PostNL pakketten"
 
-	property string actualModelText : "Pakketpost van de afgelopen maand:"
+	property string actualModelText
 	property string lastupdate
 
 	FileIO {
@@ -41,6 +41,11 @@ Screen {
 
 			// add settingsscreen button
 		addCustomTopRightButton("Instellingen");
+		if (app.postnlShowHistoryInMonths == 1) {
+			actualModelText = "Pakketpost van de afgelopen maand:"
+		} else {
+			actualModelText = "Pakketpost van de afgelopen " + app.postnlShowHistoryInMonths + " maanden:"
+		}
 	}
 
 	onCustomButtonClicked: {
