@@ -92,11 +92,11 @@ Screen {
 		var shipmentSender = "";
 		var shipmentTitle = "";
 
-			// calculate date 1 month back
+			// calculate cut off date showing parcels
 
 		var now = new Date();
 		var thisMonth = now.getMonth();
-    		now.setMonth(thisMonth - 1);		// 1 month in the past
+    		now.setMonth(thisMonth - app.postnlShowHistoryInMonths);		// x months in the past
 
 		var strMon = now.getMonth() + 1;
 		if (strMon < 10) {

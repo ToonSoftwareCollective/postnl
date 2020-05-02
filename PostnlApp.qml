@@ -21,6 +21,8 @@ App {
 
 	property string postnlUserid
 	property string postnlPassword
+	property int postnlUpdateFrequencyInMinutes : 120
+	property int postnlShowHistoryInMonths : 1
 
 	property string tileBarcode : "even geduld a.u.b"
 	property string tileSender
@@ -28,11 +30,6 @@ App {
 	property string tileTime
 
 	// user settings from config file
-	property variant postnlSettingsJson : {
-		'Userid': [],
-		'Password': "",
-		'TrayIcon': ""
-	}
 
 	FileIO {
 		id: postnlSettingsFile
@@ -44,14 +41,16 @@ App {
 		// read user settings
 
 		try {
-			postnlSettingsJson = JSON.parse(postnlSettingsFile.read());
+			var postnlSettingsJson = JSON.parse(postnlSettingsFile.read());
 			if (postnlSettingsJson['TrayIcon'] == "Yes") {
 				enableSystray = true
 			} else {
 				enableSystray = false
 			}
 			postnlUserid = postnlSettingsJson['Userid'];		
-			postnlPassword = postnlSettingsJson['Password'];		
+			postnlPassword = postnlSettingsJson['Password'];
+			if (postnlSettingsJson['UpdateFrequencyInMinutes']) postnlUpdateFrequencyInMinutes = postnlSettingsJson['UpdateFrequencyInMinutes'];		
+			if (postnlSettingsJson['ShowHistoryInMonths']) postnlShowHistoryInMonths = postnlSettingsJson['ShowHistoryInMonths'];		
 		} catch(e) {
 		}
 
@@ -86,14 +85,22 @@ App {
  		var tmpUserSettingsJson = {
 			"Userid" : postnlUserid,
 			"TrayIcon" : tmpTrayIcon,
-			"Password" : postnlPassword
+			"Password" : postnlPassword,
+			"UpdateFrequencyInMinutes" : postnlUpdateFrequencyInMinutes,
+			"ShowHistoryInMonths" : postnlShowHistoryInMonths
 		}
 
   		var doc3 = new XMLHttpRequest();
    		doc3.open("PUT", "file:///mnt/data/tsc/postnl.userSettings.json");
    		doc3.send(JSON.stringify(tmpUserSettingsJson ));
 
-		refreshPostNLData();
+		postnlDataRefreshTimer.stop();
+		postnlDataRefreshTimer.interval = 1000;
+		postnlDataRefreshTimer.start();
+
+		postnlTimer.stop();
+		postnlTimer.interval = 120000;
+		postnlTimer.start();
 	}
 
 	Timer {
@@ -103,7 +110,7 @@ App {
 		running: false
 		repeat: true
 		onTriggered: {
-			interval = 7200000 //2 hour refresh rate (note input file is only refreshed every hour, so display can be delayed by two hours)	
+			interval = postnlUpdateFrequencyInMinutes * 60000;	
 			postnlScreen.refreshScreen(); 
 		}
 	}
@@ -115,7 +122,7 @@ App {
 		running: false
 		repeat: true
 		onTriggered: {	// request tsc script to retrieve postnl inbox
-			interval = 7200000 //2 hour refresh rate	
+			interval = postnlUpdateFrequencyInMinutes * 60000;	
  			var doc4 = new XMLHttpRequest();
   			doc4.open("PUT", "file:///tmp/tsc.command");
    			doc4.send("postnl");
