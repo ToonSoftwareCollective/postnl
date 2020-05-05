@@ -1,3 +1,7 @@
+1.1.8
+- made list of packages scrollable
+- separated received and send packages
+
 1.1.7
 - made update frequency configurable
 - configurable number of months of history to show on screen
