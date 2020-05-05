@@ -4,7 +4,7 @@ import qb.components 1.0
 Rectangle {
 	id: postnlGridDelegate
 
-	width: isNxt ? parent.width - 94 : parent.width - 75
+	width: parent.width - 12
 	height: isNxt ? 55 : 44
 
 	Text {

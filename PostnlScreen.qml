@@ -220,7 +220,7 @@ Screen {
 		id: content
 		anchors.horizontalCenter: parent.horizontalCenter
 		width: parent.width - 20
-		height: isNxt ? parent.height - 50 : parent.height - 40
+		height: isNxt ? parent.height - 74 : parent.height - 59
 		y: isNxt ? 64 : 51
 		x: 10
 		radius: 3
