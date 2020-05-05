@@ -9,8 +9,11 @@ Screen {
 	screenTitle: "Recente PostNL pakketten"
 
 	property string actualModelText
-	property string lastupdate
+	property string lastupdate : "even geduld...."
 	property bool postnlLoaded : false
+	property bool showReceived : true
+	property string sentParcels
+	property string receivedParcels
 
 	FileIO {
 		id: postnlInboxFile
@@ -44,9 +47,9 @@ Screen {
 			// add settingsscreen button
 		addCustomTopRightButton("Instellingen");
 		if (app.postnlShowHistoryInMonths == 1) {
-			actualModelText = "Pakketpost van de afgelopen maand:"
+			actualModelText = "pakketen van de afgelopen maand: (" + lastupdate + ")"
 		} else {
-			actualModelText = "Pakketpost van de afgelopen " + app.postnlShowHistoryInMonths + " maanden:"
+			actualModelText = "pakketen van de afgelopen " + app.postnlShowHistoryInMonths + " maanden: (" + lastupdate + ")"
 		}
 	}
 
@@ -93,7 +96,8 @@ Screen {
 
 			// fill screen
 
-		var postNLXML = "<item>";
+		receivedParcels = "<item>";
+		sentParcels = "<item>";
 
 		var shipmentDate = "";
 		var shipmentSender = "";
@@ -147,7 +151,7 @@ Screen {
 				} else {
 					shipmentSender = "onbekende afzender";
 				}
-				postNLXML = postNLXML + "<parcel><deliveryDate>" + shipmentDate + "</deliveryDate><deliveryInfo>" + formatDelivery(postNLData['receiver'][i]['delivery']['status'], shipmentDate) + "</deliveryInfo><barcode>" + postNLData['receiver'][i]['barcode'] + "</barcode><senderInfo>" + shipmentTitle + shipmentSender + "</senderInfo></parcel>";
+				receivedParcels = receivedParcels + "<parcel><deliveryDate>" + shipmentDate + "</deliveryDate><deliveryInfo>" + formatDelivery(postNLData['receiver'][i]['delivery']['status'], shipmentDate) + "</deliveryInfo><barcode>" + postNLData['receiver'][i]['barcode'] + "</barcode><senderInfo>" + shipmentTitle + shipmentSender + "</senderInfo></parcel>";
 			}
 		}
 
@@ -165,11 +169,14 @@ Screen {
 				}
 			}
 			if (cutoffDate < shipmentDate.substring(0,10)) {
-				postNLXML = postNLXML + "<parcel><deliveryDate>" + shipmentDate + "</deliveryDate><deliveryInfo>" + formatDelivery(postNLData['sender'][j]['delivery']['status'], shipmentDate) + "</deliveryInfo><barcode>" + postNLData['sender'][j]['barcode'] + "</barcode><senderInfo>" + "Verstuurd naar " + postNLData['sender'][j]['originalReceiver']['street'] + " " + postNLData['sender'][j]['originalReceiver']['houseNumber'] + ", " + postNLData['sender'][j]['originalReceiver']['town'] + "</senderInfo></parcel>";
+				sentParcels = sentParcels + "<parcel><deliveryDate>" + shipmentDate + "</deliveryDate><deliveryInfo>" + formatDelivery(postNLData['sender'][j]['delivery']['status'], shipmentDate) + "</deliveryInfo><barcode>" + postNLData['sender'][j]['barcode'] + "</barcode><senderInfo>" + "Verstuurd naar " + postNLData['sender'][j]['originalReceiver']['street'] + " " + postNLData['sender'][j]['originalReceiver']['houseNumber'] + ", " + postNLData['sender'][j]['originalReceiver']['town'] + "</senderInfo></parcel>";
 			}
 		}
-		postNLXML = postNLXML + "</item>";
-		postnlModel.xml = postNLXML;
+		receivedParcels = receivedParcels + "</item>";
+		sentParcels = sentParcels + "</item>";
+
+		postnlModel.xml = receivedParcels;
+		showReceived = true;
 		postnlSimpleList.initialView();
 		postnlLoaded = true;
 	}
@@ -179,28 +186,40 @@ Screen {
 		height: isNxt ? 55 : 45
 		width: parent.width
 
+		StandardButton {
+			id: showParcelType
+			height: isNxt ? 40 : 32
+			text: (showReceived) ? "Ontvangen " : "Verstuurde " 
+			fontPixelSize: isNxt ? 25 : 20
+			color: colors.background
+			anchors {
+				bottom: parent.bottom
+				left: parent.left
+				leftMargin : 10
+			}
+
+			onClicked: {
+				if (showReceived) {
+					showReceived = false;
+					postnlModel.xml = sentParcels;
+				} else {
+					showReceived = true;
+					postnlModel.xml = receivedParcels;
+				}
+				postnlSimpleList.initialView();
+			}
+		}
+
 		Text {
 			id: headerText
 			text: actualModelText
 			font.family: qfont.semiBold.name
 			font.pixelSize: isNxt ? 25 : 20
 			anchors {
-				left: parent.left
-				leftMargin: isNxt ? 25 : 20
-				bottom: parent.bottom
-			}
-		}
-
-		Text {
-			id: updatedText
-			text: "bijgewerkt op: " + lastupdate
-			anchors {
-				bottom: parent.bottom
-				right: parent.right
-			}
-			font {
-				pixelSize: isNxt ? 18 : 15
-				family: qfont.italic.name
+				left: showParcelType.right
+				leftMargin: isNxt ? 16 : 12
+				top: showParcelType.top
+				topMargin : isNxt ? 4 : 3
 			}
 		}
 	}
@@ -220,7 +239,7 @@ Screen {
 		id: content
 		anchors.horizontalCenter: parent.horizontalCenter
 		width: parent.width - 20
-		height: isNxt ? parent.height - 74 : parent.height - 59
+		height: isNxt ? parent.height - 74 : parent.height - 49
 		y: isNxt ? 64 : 51
 		x: 10
 		radius: 3
