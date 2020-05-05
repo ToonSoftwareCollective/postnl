@@ -1,6 +1,7 @@
 import QtQuick 2.1
 import qb.components 1.0
 import BasicUIControls 1.0;
+import SimpleXmlListModel 1.0
 import FileIO 1.0
 
 Screen {
@@ -9,6 +10,7 @@ Screen {
 
 	property string actualModelText
 	property string lastupdate
+	property bool postnlLoaded : false
 
 	FileIO {
 		id: postnlInboxFile
@@ -91,7 +93,7 @@ Screen {
 
 			// fill screen
 
-		postnlModel.clear();
+		var postNLXML = "<item>";
 
 		var shipmentDate = "";
 		var shipmentSender = "";
@@ -145,7 +147,7 @@ Screen {
 				} else {
 					shipmentSender = "onbekende afzender";
 				}
-				postnlModel.append({deliveryDate: shipmentDate, deliveryInfo: formatDelivery(postNLData['receiver'][i]['delivery']['status'], shipmentDate), barcode: postNLData['receiver'][i]['barcode'], senderInfo: shipmentTitle + shipmentSender});
+				postNLXML = postNLXML + "<parcel><deliveryDate>" + shipmentDate + "</deliveryDate><deliveryInfo>" + formatDelivery(postNLData['receiver'][i]['delivery']['status'], shipmentDate) + "</deliveryInfo><barcode>" + postNLData['receiver'][i]['barcode'] + "</barcode><senderInfo>" + shipmentTitle + shipmentSender + "</senderInfo></parcel>";
 			}
 		}
 
@@ -163,25 +165,13 @@ Screen {
 				}
 			}
 			if (cutoffDate < shipmentDate.substring(0,10)) {
-				postnlModel.append({deliveryDate: shipmentDate, deliveryInfo: formatDelivery(postNLData['sender'][j]['delivery']['status'], shipmentDate), barcode: postNLData['sender'][j]['barcode'], senderInfo: "Verstuurd naar " + postNLData['sender'][j]['originalReceiver']['street'] + " " + postNLData['sender'][j]['originalReceiver']['houseNumber'] + ", " + postNLData['sender'][j]['originalReceiver']['town']});
+				postNLXML = postNLXML + "<parcel><deliveryDate>" + shipmentDate + "</deliveryDate><deliveryInfo>" + formatDelivery(postNLData['sender'][j]['delivery']['status'], shipmentDate) + "</deliveryInfo><barcode>" + postNLData['sender'][j]['barcode'] + "</barcode><senderInfo>" + "Verstuurd naar " + postNLData['sender'][j]['originalReceiver']['street'] + " " + postNLData['sender'][j]['originalReceiver']['houseNumber'] + ", " + postNLData['sender'][j]['originalReceiver']['town'] + "</senderInfo></parcel>";
 			}
 		}
-
-			// sort on deliverydate
-		sortPostnlModel();
-	}
-
-	function sortPostnlModel() {
-		var n;
-		var i;
-		for (n=0; n < postnlModel.count; n++) {
-			for (i=n+1; i < postnlModel.count; i++) {
-				if (postnlModel.get(n).deliveryDate < postnlModel.get(i).deliveryDate) {
-					postnlModel.move(n, i, 1);
-					n=0;
-				}
-			}
-		}
+		postNLXML = postNLXML + "</item>";
+		postnlModel.xml = postNLXML;
+		postnlSimpleList.initialView();
+		postnlLoaded = true;
 	}
 
 	Item {
@@ -215,111 +205,43 @@ Screen {
 		}
 	}
 
-	GridView {
-		id: postnlGridView
-
-		model: postnlModel
-		delegate: Rectangle
-			{
-				width: isNxt ? 975 : 760
-				height: isNxt ? 60 : 48
-
-				Text {
-					id: txtShippedBy
-					text: senderInfo
-					font.pixelSize: isNxt ? 20 : 16
-					font.family: qfont.bold.name
-					color: colors.clockTileColor
-					anchors {
-						top: parent.top
-						left: parent.left
-						leftMargin: 5
-					}
-				}
-
-				Text {
-					id: txtDelivery
-					text: deliveryInfo
-					font.pixelSize: isNxt ? 20 : 16
-					font.family: qfont.regular.name
-					color: colors.clockTileColor
-					anchors {
-						top: parent.top
-						right: parent.right
-						rightMargin: 5
-					}
-				}
-
-				Text {
-					id: txtBarcode
-					text: barcode
-					font.pixelSize: isNxt ? 20 : 16
-					font.family: qfont.regular.name
-					color: colors.clockTileColor
-					anchors {
-						top: txtShippedBy.bottom
-						left: txtShippedBy.left
-					}
-				}
-			}
-
-		flow: GridView.TopToBottom
-		cellWidth: isNxt ? 975 : 750
-		cellHeight: isNxt ? 65 : 52
-
-		anchors {
-			top: header.bottom
-			bottom: parent.bottom
-			left: parent.left
-			topMargin: 5
-			leftMargin: isNxt ? 25 : 20
-		}
-	}
-
-	ListModel {
+	SimpleXmlListModel {
 		id: postnlModel
+		query: "/item/parcel"
+		roles: ({
+			deliveryDate: "string",
+			deliveryInfo: "string",
+			barcode: "string",
+			senderInfo: "string"
+		})
 	}
 
+	Rectangle {
+		id: content
+		anchors.horizontalCenter: parent.horizontalCenter
+		width: parent.width - 20
+		height: isNxt ? parent.height - 50 : parent.height - 40
+		y: isNxt ? 64 : 51
+		x: 10
+		radius: 3
 
-	GridView {
-		id: letterGridView
-
-		model: letterModel
-		delegate: Rectangle
-			{
-				width: isNxt ? 250 : 200
-				height: isNxt ? 30 : 24
-
-
-				Text {
-					id: txtDelivery
-					text: deliveryDate
-					font.pixelSize: isNxt ? 20 : 16
-					font.family: qfont.regular.name
-					color: colors.clockTileColor
-					anchors {
-						top: parent.top
-						left: parent.left
-						leftMargin: 5
-					}
-				}
-			}
-
-		flow: GridView.TopToBottom
-		cellWidth: isNxt ? 250 : 200
-		cellHeight: isNxt ? 35 : 28
-		visible: false
-
-		anchors {
-			top: header.bottom
-			bottom: parent.bottom
-			left: parent.left
-			topMargin: 5
-			leftMargin: isNxt ? 25 : 20
+		PostnlSimpleList {
+			id: postnlSimpleList
+			delegate: PostnlScreenDelegate{}
+			dataModel: postnlModel
+			itemHeight: isNxt ? 30 : 23
+			itemsPerPage: 7
+			anchors.top: parent.top
+			downIcon: "qrc:/tsc/arrowScrolldown.png"
+			buttonsHeight: isNxt ? 180 : 144
+			buttonsVisible: true
+			scrollbarVisible: true
 		}
-	}
 
-	ListModel {
-		id: letterModel
+		Throbber {
+			id: refreshThrobber
+			anchors.centerIn: parent
+			visible: !postnlLoaded
+		}
 	}
 }
