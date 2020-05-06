@@ -8,6 +8,7 @@ Screen {
 
 	onShown: {
 		enableSystrayToggle.isSwitchedOn = app.enableSystray;
+		enableUseCustomParcelNameToggle.isSwitchedOn = app.enableUseCustomParcelName;
 		postnlUseridLabel.inputText = app.postnlUserid;
 		postnlUpdateFrequencyInMinutesLabel.inputText = app.postnlUpdateFrequencyInMinutes;
 		postnlShowHistoryInMonthsLabel.inputText = app.postnlShowHistoryInMonths;
@@ -53,7 +54,7 @@ Screen {
 		if (text) {
 			app.postnlShowHistoryInMonths = text;
 			postnlShowHistoryInMonthsLabel.inputText = text;
-			app.postnlScreen.refreshScreen(); 
+			app.postnlScreen.refreshScreen();
 		}
 	}
 
@@ -254,6 +255,37 @@ Screen {
 			qnumKeyboard.open("Hoeveel maanden historie moet er getoond worden?", postnlShowHistoryInMonthsLabel.inputText, app.postnlShowHistoryInMonths, 1 , savePostnlShowHistoryInMonths, validatePostnlShowHistoryInMonths);
 			qnumKeyboard.maxTextLength = 2;
 			qnumKeyboard.state = "num_integer_clear_backspace";
+		}
+	}
+
+	Text {
+		id: enableUseCustomParcelNameLabel
+		width: postnlShowHistoryInMonthsLabel.width
+		height: isNxt ? 45 : 36
+		text: "Toon custom parcel name"
+		font.family: qfont.semiBold.name
+		font.pixelSize: isNxt ? 25 : 20
+		anchors {
+			left: postnlShowHistoryInMonthsLabel.left
+			leftMargin: isNxt ? 10 : 8
+			top: postnlShowHistoryInMonthsLabel.bottom
+			topMargin: 6
+		}
+	}
+
+	OnOffToggle {
+		id: enableUseCustomParcelNameToggle
+		height: isNxt ? 45 : 36
+		anchors.right: postnlShowHistoryInMonthsButton.right
+		anchors.leftMargin: 10
+		anchors.top: enableUseCustomParcelNameLabel.top
+		leftIsSwitchedOn: false
+		onSelectedChangedByUser: {
+			if (isSwitchedOn) {
+				app.enableUseCustomParcelName = true;
+			} else {
+				app.enableUseCustomParcelName = false;
+			}
 		}
 	}
 }

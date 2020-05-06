@@ -72,7 +72,7 @@ Screen {
 		app.tileTime =  "";
 		app.tileBarcode = "Geen pakketten verwacht";
 		app.tileSender = "";
-		app.tilePackageName = "";
+		app.tileParcelName = "";
 
 			// read inbox
 
@@ -92,8 +92,8 @@ Screen {
 				if (postNLData['receiver'][0]['sender']['companyName']) {
 					app.tileSender = postNLData['receiver'][0]['sender']['companyName'];
 				}
-				if (postNLData['receiver'][0]['trackedShipment']['title']) {
-					app.tilePackageName = postNLData['receiver'][0]['trackedShipment']['title'];
+				if (app.enableUseCustomParcelName == true && postNLData['receiver'][0]['trackedShipment']['title']) {
+					app.tileParcelName = postNLData['receiver'][0]['trackedShipment']['title'];
 				}
 
 			}
