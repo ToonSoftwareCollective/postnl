@@ -72,6 +72,7 @@ Screen {
 		app.tileTime =  "";
 		app.tileBarcode = "Geen pakketten verwacht";
 		app.tileSender = "";
+		app.tilePackageName = "";
 
 			// read inbox
 
@@ -91,6 +92,10 @@ Screen {
 				if (postNLData['receiver'][0]['sender']['companyName']) {
 					app.tileSender = postNLData['receiver'][0]['sender']['companyName'];
 				}
+				if (postNLData['receiver'][0]['trackedShipment']['title']) {
+					app.tilePackageName = postNLData['receiver'][0]['trackedShipment']['title'];
+				}
+
 			}
 		}
 
@@ -193,7 +198,7 @@ Screen {
 		StandardButton {
 			id: showParcelType
 			height: isNxt ? 40 : 32
-			text: (showReceived) ? "Ontvangen " : "Verstuurde " 
+			text: (showReceived) ? "Ontvangen " : "Verstuurde "
 			fontPixelSize: isNxt ? 25 : 20
 			color: colors.background
 			anchors {

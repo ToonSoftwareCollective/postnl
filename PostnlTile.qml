@@ -11,7 +11,7 @@ Tile {
 
 	Text {
 		id: txtBarcode
-		text: app.tileBarcode
+		text: (app.tilePackageName.length > 2) ? app.tilePackageName.substring(0, 15) : app.tileBarcode
 		color: (typeof dimmableColors !== 'undefined') ? dimmableColors.clockTileColor : colors.clockTileColor
 		anchors {
 			baseline: parent.top
