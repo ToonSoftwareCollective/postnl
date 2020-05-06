@@ -47,9 +47,9 @@ Screen {
 			// add settingsscreen button
 		addCustomTopRightButton("Instellingen");
 		if (app.postnlShowHistoryInMonths == 1) {
-			actualModelText = "pakketen van de afgelopen maand: (" + lastupdate + ")"
+			actualModelText = "pakketten van de afgelopen maand: (" + lastupdate + ")"
 		} else {
-			actualModelText = "pakketen van de afgelopen " + app.postnlShowHistoryInMonths + " maanden: (" + lastupdate + ")"
+			actualModelText = "pakketten van de afgelopen " + app.postnlShowHistoryInMonths + " maanden: (" + lastupdate + ")"
 		}
 	}
 
