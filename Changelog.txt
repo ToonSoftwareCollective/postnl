@@ -1,5 +1,5 @@
 1.1.9
-- added setting to show packages with the given name (thanks Bonno)
+- added setting to show packages with the given name instead of the barcode (thanks Bonno)
 
 1.1.8
 - made list of packages scrollable
