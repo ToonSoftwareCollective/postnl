@@ -18,7 +18,7 @@ App {
 	property string timeStr
 	property string dateStr
 	property bool enableSystray
-	property bool enableUseCustomParcelName
+	property bool enableUseCustomParcelName : false
 
 	property string postnlUserid
 	property string postnlPassword
@@ -49,10 +49,12 @@ App {
 			} else {
 				enableSystray = false
 			}
-			if (postnlSettingsJson['UseCustomParcelName'] == "Yes") {
-				enableUseCustomParcelName = true
-			} else {
-				enableUseCustomParcelName = false
+			if (postnlSettingsJson['UseCustomParcelName']) {
+				if (postnlSettingsJson['UseCustomParcelName'] == "Yes") {
+					enableUseCustomParcelName = true
+				} else {
+					enableUseCustomParcelName = false
+				}
 			}
 			postnlUserid = postnlSettingsJson['Userid'];
 			postnlPassword = postnlSettingsJson['Password'];
@@ -89,7 +91,7 @@ App {
 			tmpTrayIcon = "No";
 		}
 		var tmpCustomParcelName = "";
-		if (enableUseCustomParcelName == true) {
+		if (enableUseCustomParcelName) {
 			tmpCustomParcelName = "Yes";
 		} else {
 			tmpCustomParcelName = "No";
