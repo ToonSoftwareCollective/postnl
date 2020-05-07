@@ -18,6 +18,7 @@ App {
 	property string timeStr
 	property string dateStr
 	property bool enableSystray
+	property bool enableUseCustomParcelName
 
 	property string postnlUserid
 	property string postnlPassword
@@ -28,6 +29,7 @@ App {
 	property string tileSender
 	property string tileDate
 	property string tileTime
+	property string tileParcelName
 
 	// user settings from config file
 
@@ -47,10 +49,15 @@ App {
 			} else {
 				enableSystray = false
 			}
-			postnlUserid = postnlSettingsJson['Userid'];		
+			if (postnlSettingsJson['UseCustomParcelName'] == "Yes") {
+				enableUseCustomParcelName = true
+			} else {
+				enableUseCustomParcelName = false
+			}
+			postnlUserid = postnlSettingsJson['Userid'];
 			postnlPassword = postnlSettingsJson['Password'];
-			if (postnlSettingsJson['UpdateFrequencyInMinutes']) postnlUpdateFrequencyInMinutes = postnlSettingsJson['UpdateFrequencyInMinutes'];		
-			if (postnlSettingsJson['ShowHistoryInMonths']) postnlShowHistoryInMonths = postnlSettingsJson['ShowHistoryInMonths'];		
+			if (postnlSettingsJson['UpdateFrequencyInMinutes']) postnlUpdateFrequencyInMinutes = postnlSettingsJson['UpdateFrequencyInMinutes'];
+			if (postnlSettingsJson['ShowHistoryInMonths']) postnlShowHistoryInMonths = postnlSettingsJson['ShowHistoryInMonths'];
 		} catch(e) {
 		}
 
@@ -72,7 +79,7 @@ App {
 	}
 
 	function saveSettings() {
-		
+
 		// save user settings
 
 		var tmpTrayIcon = "";
@@ -81,13 +88,21 @@ App {
 		} else {
 			tmpTrayIcon = "No";
 		}
+		var tmpCustomParcelName = "";
+		if (enableUseCustomParcelName == true) {
+			tmpCustomParcelName = "Yes";
+		} else {
+			tmpCustomParcelName = "No";
+		}
+
 
  		var tmpUserSettingsJson = {
 			"Userid" : postnlUserid,
 			"TrayIcon" : tmpTrayIcon,
 			"Password" : postnlPassword,
 			"UpdateFrequencyInMinutes" : postnlUpdateFrequencyInMinutes,
-			"ShowHistoryInMonths" : postnlShowHistoryInMonths
+			"ShowHistoryInMonths" : postnlShowHistoryInMonths,
+			"UseCustomParcelName": tmpCustomParcelName
 		}
 
   		var doc3 = new XMLHttpRequest();
@@ -110,8 +125,8 @@ App {
 		running: false
 		repeat: true
 		onTriggered: {
-			interval = postnlUpdateFrequencyInMinutes * 60000;	
-			postnlScreen.refreshScreen(); 
+			interval = postnlUpdateFrequencyInMinutes * 60000;
+			postnlScreen.refreshScreen();
 		}
 	}
 
@@ -122,7 +137,7 @@ App {
 		running: false
 		repeat: true
 		onTriggered: {	// request tsc script to retrieve postnl inbox
-			interval = postnlUpdateFrequencyInMinutes * 60000;	
+			interval = postnlUpdateFrequencyInMinutes * 60000;
  			var doc4 = new XMLHttpRequest();
   			doc4.open("PUT", "file:///tmp/tsc.command");
    			doc4.send("postnl");
