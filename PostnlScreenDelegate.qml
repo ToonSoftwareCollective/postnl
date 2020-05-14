@@ -27,7 +27,7 @@ Rectangle {
 		font.family: qfont.regular.name
 		color: colors.clockTileColor
 		anchors {
-			top: parent.top
+			top: txtShippedBy.bottom
 			right: parent.right
 			rightMargin: 5
 		}
