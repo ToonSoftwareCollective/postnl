@@ -262,7 +262,7 @@ Screen {
 		id: enableUseCustomParcelNameLabel
 		width: postnlShowHistoryInMonthsLabel.width
 		height: isNxt ? 45 : 36
-		text: "Toon custom parcel name"
+		text: "Toon eigen naam pakket"
 		font.family: qfont.semiBold.name
 		font.pixelSize: isNxt ? 25 : 20
 		anchors {
