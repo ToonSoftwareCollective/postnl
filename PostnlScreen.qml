@@ -107,6 +107,7 @@ Screen {
 		var shipmentDate = "";
 		var shipmentSender = "";
 		var shipmentTitle = "";
+		var tileParcelName = "";
 
 			// calculate cut off date showing parcels
 
@@ -160,7 +161,13 @@ Screen {
 				} else {
 					shipmentSender = "onbekende afzender";
 				}
-				receivedParcels = receivedParcels + "<parcel><deliveryDate>" + shipmentDate + "</deliveryDate><deliveryInfo>" + formatDelivery(postNLData['receiver'][i]['delivery']['status'], shipmentDate) + "</deliveryInfo><barcode>" + postNLData['receiver'][i]['barcode'] + "</barcode><senderInfo>" + shipmentTitle + shipmentSender + "</senderInfo></parcel>";
+
+				if (app.enableUseCustomParcelName == true && postNLData['receiver'][i]['trackedShipment']['title']) {
+					tileParcelName = postNLData['receiver'][i]['trackedShipment']['title'] + " - " + postNLData['receiver'][i]['barcode'];
+				} else {
+					tileParcelName = postNLData['receiver'][i]['barcode'];
+				}
+				receivedParcels = receivedParcels + "<parcel><deliveryDate>" + shipmentDate + "</deliveryDate><deliveryInfo>" + formatDelivery(postNLData['receiver'][i]['delivery']['status'], shipmentDate) + "</deliveryInfo><barcode>" + tileParcelName + "</barcode><senderInfo>" + shipmentTitle + shipmentSender + "</senderInfo></parcel>";
 			}
 		}
 
