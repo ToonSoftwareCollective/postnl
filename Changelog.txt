@@ -1,3 +1,6 @@
+1.1.11
+- also display custom parcel name in list screen (Thanks Bonno)
+
 1.1.10
 - show the delivery date info of a package on the second line to avoid overlap with the shipmentinfo
 
