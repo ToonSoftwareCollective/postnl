@@ -80,7 +80,7 @@ Screen {
 		if (postNLData['receiver'].length > 0) {
 
 				//format tile when parcel is coming
-			if (postNLData['receiver'][0]['delivery']['status'] !== 'Delivered') {
+			if ((postNLData['receiver'][0]['delivery']['status'] !== 'Delivered') && (postNLData['receiver'][0]['shipmentType'] !== 'Pending')) {
 				if (postNLData['receiver'][0]['delivery']['timeframe']['from']) {
 					app.tileDate =  postNLData['receiver'][0]['delivery']['timeframe']['from'].substring(0,10);
 					app.tileTime =  postNLData['receiver'][0]['delivery']['timeframe']['from'].substring(11,16) +  " - " + postNLData['receiver'][0]['delivery']['timeframe']['to'].substring(11,16);
@@ -129,45 +129,48 @@ Screen {
 
 		for (var i = 0; i < postNLData['receiver'].length; i++) {
 
-				// determine date
-			if (postNLData['receiver'][i]['delivery']['status'] == 'Delivered') {
-				shipmentDate = 	formatDeliveryDate(postNLData['receiver'][i]['delivery']['deliveryDate']);
-				shipmentTitle = "Ontvangen van ";
-			} else {
-				if (postNLData['receiver'][i]['delivery']['timeframe']['from']) {
-					shipmentDate = 	formatDeliveryDate(postNLData['receiver'][i]['delivery']['timeframe']['from']);
+			if (postNLData['receiver'][i]['shipmentType'] !== 'Pending') {
+
+					// determine date
+				if (postNLData['receiver'][i]['delivery']['status'] == 'Delivered') {
+					shipmentDate = 	formatDeliveryDate(postNLData['receiver'][i]['delivery']['deliveryDate']);
+					shipmentTitle = "Ontvangen van ";
 				} else {
-					shipmentDate = "";
-				}
-				if (postNLData['receiver'][i]['delivery']['status'] == 'ReturnToSender') {
-					shipmentTitle = "Retour afzender ";
-				} else {
-					if (postNLData['receiver'][i]['delivery']['status'] == 'InTransit') {
-						shipmentTitle = "Zending nog niet bij PostNL, van ";
+					if (postNLData['receiver'][i]['delivery']['timeframe']['from']) {
+						shipmentDate = 	formatDeliveryDate(postNLData['receiver'][i]['delivery']['timeframe']['from']);
 					} else {
-						shipmentTitle = "Te ontvangen van ";
+						shipmentDate = "";
+					}
+					if (postNLData['receiver'][i]['delivery']['status'] == 'ReturnToSender') {
+						shipmentTitle = "Retour afzender ";
+					} else {
+						if (postNLData['receiver'][i]['delivery']['status'] == 'InTransit') {
+							shipmentTitle = "Zending nog niet bij PostNL, van ";
+						} else {
+							shipmentTitle = "Te ontvangen van ";
+						}
 					}
 				}
-			}
-
-			if (cutoffDate < shipmentDate.substring(0,10)) {
-					// determine sender
-				if (postNLData['receiver'][i]['sender']) {
-					if (postNLData['receiver'][i]['sender']['companyName']) {
-						shipmentSender = postNLData['receiver'][i]['sender']['companyName'] + "  (" + postNLData['receiver'][i]['sender']['town'] + ")";
+	
+				if (cutoffDate < shipmentDate.substring(0,10)) {
+						// determine sender
+					if (postNLData['receiver'][i]['sender']) {
+						if (postNLData['receiver'][i]['sender']['companyName']) {
+							shipmentSender = postNLData['receiver'][i]['sender']['companyName'] + "  (" + postNLData['receiver'][i]['sender']['town'] + ")";
+						} else {
+							shipmentSender = postNLData['receiver'][i]['sender']['lastName'] + " (" + postNLData['receiver'][i]['sender']['town'] + ")";
+						}
 					} else {
-						shipmentSender = postNLData['receiver'][i]['sender']['lastName'] + " (" + postNLData['receiver'][i]['sender']['town'] + ")";
+						shipmentSender = "onbekende afzender";
 					}
-				} else {
-					shipmentSender = "onbekende afzender";
+	
+					if (app.enableUseCustomParcelName == true && postNLData['receiver'][i]['trackedShipment']['title']) {
+						tileParcelName = postNLData['receiver'][i]['trackedShipment']['title'] + " - " + postNLData['receiver'][i]['barcode'];
+					} else {
+						tileParcelName = postNLData['receiver'][i]['barcode'];
+					}
+					receivedParcels = receivedParcels + "<parcel><deliveryDate>" + shipmentDate + "</deliveryDate><deliveryInfo>" + formatDelivery(postNLData['receiver'][i]['delivery']['status'], shipmentDate) + "</deliveryInfo><barcode>" + tileParcelName + "</barcode><senderInfo>" + shipmentTitle + shipmentSender + "</senderInfo></parcel>";
 				}
-
-				if (app.enableUseCustomParcelName == true && postNLData['receiver'][i]['trackedShipment']['title']) {
-					tileParcelName = postNLData['receiver'][i]['trackedShipment']['title'] + " - " + postNLData['receiver'][i]['barcode'];
-				} else {
-					tileParcelName = postNLData['receiver'][i]['barcode'];
-				}
-				receivedParcels = receivedParcels + "<parcel><deliveryDate>" + shipmentDate + "</deliveryDate><deliveryInfo>" + formatDelivery(postNLData['receiver'][i]['delivery']['status'], shipmentDate) + "</deliveryInfo><barcode>" + tileParcelName + "</barcode><senderInfo>" + shipmentTitle + shipmentSender + "</senderInfo></parcel>";
 			}
 		}
 

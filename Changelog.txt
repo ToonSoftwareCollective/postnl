@@ -1,3 +1,11 @@
+1.1.13
+- to be expected packages entered via mobile or Weblogin were creating errors.
+  these future packages are filtered out now
+
+1.1.12
+- now xorrectly handling 'Pending' shipments (manually entered on your mobile PostNL app/PostNL Web site and saved for future use)
+  these pending shipments are not shown on Toon but will not crash the app anymore
+
 1.1.11
 - also display custom parcel name in list screen (Thanks Bonno)
 
