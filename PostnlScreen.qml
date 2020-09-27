@@ -145,7 +145,7 @@ Screen {
 						shipmentTitle = "Retour afzender ";
 					} else {
 						if (postNLData['receiver'][i]['delivery']['status'] == 'InTransit') {
-							shipmentTitle = "Zending nog niet bij PostNL, van ";
+							shipmentTitle = "Zending ontvangen door PostNL, van ";
 						} else {
 							shipmentTitle = "Te ontvangen van ";
 						}
