@@ -1,3 +1,6 @@
+1.1.5
+- fixed changed logon procedure (glsf91)
+
 1.1.14
 - fix for parcels which are received by PostNL (but not yet scheduled for delivery) which were shown on Toon as 'Zending nog niet bij PostNL'
 
