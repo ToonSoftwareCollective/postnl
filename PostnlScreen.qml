@@ -14,6 +14,7 @@ Screen {
 	property bool showReceived : true
 	property string sentParcels
 	property string receivedParcels
+	property string shipmentSender
 
 	FileIO {
 		id: postnlInboxFile
@@ -105,7 +106,7 @@ Screen {
 		sentParcels = "<item>";
 
 		var shipmentDate = "";
-		var shipmentSender = "";
+		shipmentSender = "";
 		var shipmentTitle = "";
 		var tileParcelName = "";
 
@@ -163,7 +164,8 @@ Screen {
 					} else {
 						shipmentSender = "onbekende afzender";
 					}
-					shipmentSender.replace("&", "en");
+
+					shipmentSender = shipmentSender.replace(String.fromCharCode(38), "-");
 	
 					if (app.enableUseCustomParcelName == true && postNLData['receiver'][i]['trackedShipment']['title']) {
 						tileParcelName = postNLData['receiver'][i]['trackedShipment']['title'] + " - " + postNLData['receiver'][i]['barcode'];
@@ -194,6 +196,9 @@ Screen {
 		}
 		receivedParcels = receivedParcels + "</item>";
 		sentParcels = sentParcels + "</item>";
+
+		console.log("postnl receivedParcels:");
+		console.log(receivedParcels);
 
 		postnlModel.xml = receivedParcels;
 		showReceived = true;

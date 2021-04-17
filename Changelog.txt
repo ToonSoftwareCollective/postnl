@@ -1,4 +1,4 @@
-1.1.16
+1.1.17
 - internal code cleanup, correct handling of '&' in senrder names
 
 1.1.15
