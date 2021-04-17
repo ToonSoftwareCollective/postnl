@@ -65,9 +65,6 @@ App {
 
 		postnlDataRefreshTimer.start();
 		postnlTimer.start();
-
-		lastupdate = lastupdateFile.read();
-
 	}
 
 	// Postnl signals, used to update the listview and filter enabled button

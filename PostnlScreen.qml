@@ -163,6 +163,7 @@ Screen {
 					} else {
 						shipmentSender = "onbekende afzender";
 					}
+					shipmentSender.replace("&", "en");
 	
 					if (app.enableUseCustomParcelName == true && postNLData['receiver'][i]['trackedShipment']['title']) {
 						tileParcelName = postNLData['receiver'][i]['trackedShipment']['title'] + " - " + postNLData['receiver'][i]['barcode'];

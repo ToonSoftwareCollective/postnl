@@ -83,7 +83,6 @@ Screen {
 		y: 10
 
 		anchors {
-			left: isNxt ? 20 : 16
 			top: parent.top
 			topMargin: isNxt ? 30 : 24
 		}
@@ -186,7 +185,6 @@ Screen {
 		y: 10
 
 		anchors {
-			left: isNxt ? 20 : 16
 			top: postnlPassword.bottom
 			topMargin: 6
 		}
@@ -227,7 +225,6 @@ Screen {
 		y: 10
 
 		anchors {
-			left: isNxt ? 20 : 16
 			top: postnlUpdateFrequencyInMinutesLabel.bottom
 			topMargin: 6
 		}
@@ -253,7 +250,6 @@ Screen {
 		bottomClickMargin: 3
 		onClicked: {
 			qnumKeyboard.open("Hoeveel maanden historie moet er getoond worden?", postnlShowHistoryInMonthsLabel.inputText, app.postnlShowHistoryInMonths, 1 , savePostnlShowHistoryInMonths, validatePostnlShowHistoryInMonths);
-			qnumKeyboard.maxTextLength = 2;
 			qnumKeyboard.state = "num_integer_clear_backspace";
 		}
 	}
