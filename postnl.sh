@@ -177,7 +177,7 @@ REQUESTVERIFICATIONTOKEN=""
 RESPFILE="$TMPDIR/postnl-resp1.tmp"
 removeFile $RESPFILE
 
-STATUSCODE=`curl $PROXY -w "\n%{http_code}" -o $RESPFILE -k -s -b non-existing -c $COOKIEFILE https://jouw.postnl.nl/identity/Account/Login`
+STATUSCODE=`curl $PROXY -w "\n%{http_code}" -o $RESPFILE -k -s -b non-existing -c $COOKIEFILE https://jouw.postnl.nl/identity/Account/Login?ReturnUrl=%2Fidentity%2Fconnect%2Fauthorize%2Fcallback%3Fclient_id%3Dpnl-postnl-site%26audience%3Dpoa-profiles-api%26scope%3Dopenid%2520profile%2520email%2520poa-profiles-api%2520hashed-data%26response_type%3Dcode%26code_challenge_method%3DS256%26code_challenge%3DyngZ35grnSHb1e6tYRpjGOQsnAgkNQ-_QFlW-HE_cEE%26prompt%3Dprompt%26state%3D9840598ffe7dc959516f6bd29458c3ab2b9463266c88cbe367bb1e4ac5387e2d%26redirect_uri%3Dhttps%253A%252F%252Fwww.postnl.nl%252Fsignin%26ui_locales%3Dnl_NL`
 if [ ! $STATUSCODE = "200" ]
 then
 	echo "Error: Wrong responsecode $STATUSCODE received from Account/Login step 1 request. See $RESPFILE. Aborting."
@@ -194,7 +194,7 @@ fi
 # echo "RequestVerificationToken: $REQUESTVERIFICATIONTOKEN"
 
 URLWITHSTATIC=`cat $RESPFILE | tr '\n' '\r' | sed "s/.*src=\"\([^\"]*\).*/\1/"`
-if [ ${#URLWITHSTATIC} -lt 35 ] || [ ${#URLWITHSTATIC} -gt 50 ]
+if [ ${#URLWITHSTATIC} -lt 35 ] || [ ${#URLWITHSTATIC} -gt 52 ]
 then
 	echo "Error: UrlWithStatic has wrong size. Aborting."
 	exit 1
@@ -217,7 +217,7 @@ then
 	exit 1
 fi
 
-if ! grep -q "{\"success\":true}" $RESPFILE
+if ! cat $RESPFILE | tr -d '[[:space:]]' | grep -q "{\"success\":true}"
 then
 	echo "Error: No success: true received from static request. See $RESPFILE. Aborting."
 	exit 1
