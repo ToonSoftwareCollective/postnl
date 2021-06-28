@@ -10,7 +10,7 @@
 # "==================================================================================================================================================================="
 # "This script can be used to get a json with Track & Trace of packages of Postnl."
 # "You need a postnl account to use this script"
-# 
+#
 # "Version: 1.2  - glsf91 - 1-5-2020"
 #
 # "DON'T RUN this script to many times in a hour. Use at our own risk."
@@ -29,7 +29,7 @@ usage() {
         -d <directory for temporary files> (mandatory)
 		-f Force new login (optional)
         -h Display this help text
-		
+
         example:
             -u \"myusername\" -p \"mypassword\" -d \"/tmp/postnl\"
         "
@@ -128,7 +128,7 @@ do
 	esac
 done
 
-# Check 
+# Check
 [ -z "$USERNAME" ] && exit_abnormal
 [ -z "$PASSWORD" ] && exit_abnormal
 [ -z "$TMPDIR" ] && exit_abnormal
@@ -157,7 +157,7 @@ cd $TMPDIR
 if [ -f $ACCESSCODEFILE ] && ! $FORCELOGIN
 then
 	if [ -n "$(find $ACCESSCODEFILE  -mmin -60 -type f)" ]
-	then 
+	then
 		echo "Found recent accesscode. Re-use this accesscode."
 		readInbox $ACCESSCODEFILE
 		exit
@@ -184,18 +184,18 @@ then
 	exit 1
 fi
 
-REQUESTVERIFICATIONTOKEN=`cat $RESPFILE | tr '\n' '\r' | sed "s/.*__RequestVerificationToken.* value=\"\([^\"]*\).*/\1/"` 
+REQUESTVERIFICATIONTOKEN=`cat $RESPFILE | tr '\n' '\r' | sed "s/.*__RequestVerificationToken.* value=\"\([^\"]*\).*/\1/"`
 if [ ${#REQUESTVERIFICATIONTOKEN} -lt 100 ] || [ ${#REQUESTVERIFICATIONTOKEN} -gt 200 ]
-then 
+then
 	echo "Error: RequestVerificationToken has wrong size. Aborting."
 	exit 1
 fi
 
 # echo "RequestVerificationToken: $REQUESTVERIFICATIONTOKEN"
 
-URLWITHSTATIC=`cat $RESPFILE | tr '\n' '\r' | sed "s/.*src=\"\([^\"]*\).*/\1/"` 
+URLWITHSTATIC=`cat $RESPFILE | tr '\n' '\r' | sed "s/.*src=\"\([^\"]*\).*/\1/"`
 if [ ${#URLWITHSTATIC} -lt 35 ] || [ ${#URLWITHSTATIC} -gt 50 ]
-then 
+then
 	echo "Error: UrlWithStatic has wrong size. Aborting."
 	exit 1
 fi
