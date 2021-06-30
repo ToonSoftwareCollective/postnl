@@ -194,7 +194,7 @@ fi
 # echo "RequestVerificationToken: $REQUESTVERIFICATIONTOKEN"
 
 URLWITHSTATIC=`cat $RESPFILE | tr '\n' '\r' | sed "s/.*src=\"\([^\"]*\).*/\1/"`
-if [ ${#URLWITHSTATIC} -lt 35 ] || [ ${#URLWITHSTATIC} -gt 52 ]
+if [ ${#URLWITHSTATIC} -lt 35 ]
 then
 	echo "Error: UrlWithStatic has wrong size. Aborting."
 	exit 1
