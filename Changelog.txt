@@ -1,3 +1,6 @@
+1.1.18
+- fixed changed logon procedure (glsf91)
+
 1.1.17
 - internal code cleanup, correct handling of '&' in senrder names
 
