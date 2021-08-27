@@ -153,7 +153,7 @@ Screen {
 					}
 				}
 	
-				if (cutoffDate < shipmentDate.substring(0,10)) {
+				if ((cutoffDate < shipmentDate.substring(0,10)) || (postNLData['receiver'][i]['delivery']['status'] == 'InTransit')) {
 						// determine sender
 					if (postNLData['receiver'][i]['sender']) {
 						if (postNLData['receiver'][i]['sender']['companyName']) {
