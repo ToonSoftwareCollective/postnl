@@ -30,14 +30,18 @@ Screen {
 		return dateString.substring(0, 10) + " " + dateString.substring(11,16);
 	}
 
-	function formatDelivery(status, deliveryDate) {
+	function formatDelivery(status, deliveryDate, pickupPoint) {
 		if (status == 'Delivered') {
 			return "Afgeleverd op " + deliveryDate;
 		} else {
 			if (status == 'ReturnToSender') {
 				return " ";
 			} else {
-				return "Onderweg, aflevering vanaf " + deliveryDate;
+				if (pickupPoint.length > 1) {
+					return "Af te halen bij " + pickupPoint;
+				} else {
+					return "Onderweg, aflevering vanaf " + deliveryDate;
+				}
 			}
 		}
 	}
@@ -86,8 +90,13 @@ Screen {
 					app.tileDate =  postNLData['receiver'][0]['delivery']['timeframe']['from'].substring(0,10);
 					app.tileTime =  postNLData['receiver'][0]['delivery']['timeframe']['from'].substring(11,16) +  " - " + postNLData['receiver'][0]['delivery']['timeframe']['to'].substring(11,16);
 				} else {
-					app.tileDate =  " ";
-					app.tileTime =  " ";
+					if (postNLData['receiver'][0]['deliveryLocation']['name']) {
+						app.tileDate =  " ";
+						app.tileTime =  "ophalen bij " + postNLData['receiver'][0]['deliveryLocation']['name'];
+					} else {
+						app.tileDate =  " ";
+						app.tileTime =  " ";
+					}
 				}
 				app.tileBarcode = postNLData['receiver'][0]['barcode'];
 				if (postNLData['receiver'][0]['sender']['companyName']) {
@@ -109,6 +118,7 @@ Screen {
 		shipmentSender = "";
 		var shipmentTitle = "";
 		var tileParcelName = "";
+		var pickupPoint = "";
 
 			// calculate cut off date showing parcels
 
@@ -133,6 +143,7 @@ Screen {
 			if (postNLData['receiver'][i]['shipmentType'] !== 'Pending') {
 
 					// determine date
+				pickupPoint = "";
 				if (postNLData['receiver'][i]['delivery']['status'] == 'Delivered') {
 					shipmentDate = 	formatDeliveryDate(postNLData['receiver'][i]['delivery']['deliveryDate']);
 					shipmentTitle = "Ontvangen van ";
@@ -147,6 +158,7 @@ Screen {
 					} else {
 						if (postNLData['receiver'][i]['delivery']['status'] == 'InTransit') {
 							shipmentTitle = "Zending ontvangen door PostNL, van ";
+							if (postNLData['receiver'][i]['deliveryLocation']['name']) pickupPoint = postNLData['receiver'][i]['deliveryLocation']['name'];
 						} else {
 							shipmentTitle = "Te ontvangen van ";
 						}
@@ -172,7 +184,8 @@ Screen {
 					} else {
 						tileParcelName = postNLData['receiver'][i]['barcode'];
 					}
-					receivedParcels = receivedParcels + "<parcel><deliveryDate>" + shipmentDate + "</deliveryDate><deliveryInfo>" + formatDelivery(postNLData['receiver'][i]['delivery']['status'], shipmentDate) + "</deliveryInfo><barcode>" + tileParcelName + "</barcode><senderInfo>" + shipmentTitle + shipmentSender + "</senderInfo></parcel>";
+					pickupPoint = 
+					receivedParcels = receivedParcels + "<parcel><deliveryDate>" + shipmentDate + "</deliveryDate><deliveryInfo>" + formatDelivery(postNLData['receiver'][i]['delivery']['status'], shipmentDate, pickupPoint) + "</deliveryInfo><barcode>" + tileParcelName + "</barcode><senderInfo>" + shipmentTitle + shipmentSender + "</senderInfo></parcel>";
 				}
 			}
 		}
@@ -181,6 +194,7 @@ Screen {
 
 		for (var j = 0; j < postNLData['sender'].length; j++) {
 
+			pickupPoint = "";
 			if (postNLData['sender'][j]['delivery']['deliveryDate']) {
 				shipmentDate = 	formatDeliveryDate(postNLData['sender'][j]['delivery']['deliveryDate']);
 			} else {
@@ -191,14 +205,11 @@ Screen {
 				}
 			}
 			if (cutoffDate < shipmentDate.substring(0,10)) {
-				sentParcels = sentParcels + "<parcel><deliveryDate>" + shipmentDate + "</deliveryDate><deliveryInfo>" + formatDelivery(postNLData['sender'][j]['delivery']['status'], shipmentDate) + "</deliveryInfo><barcode>" + postNLData['sender'][j]['barcode'] + "</barcode><senderInfo>" + "Verstuurd naar " + postNLData['sender'][j]['originalReceiver']['street'] + " " + postNLData['sender'][j]['originalReceiver']['houseNumber'] + ", " + postNLData['sender'][j]['originalReceiver']['town'] + "</senderInfo></parcel>";
+				sentParcels = sentParcels + "<parcel><deliveryDate>" + shipmentDate + "</deliveryDate><deliveryInfo>" + formatDelivery(postNLData['sender'][j]['delivery']['status'], shipmentDate, pickupPoint) + "</deliveryInfo><barcode>" + postNLData['sender'][j]['barcode'] + "</barcode><senderInfo>" + "Verstuurd naar " + postNLData['sender'][j]['originalReceiver']['street'] + " " + postNLData['sender'][j]['originalReceiver']['houseNumber'] + ", " + postNLData['sender'][j]['originalReceiver']['town'] + "</senderInfo></parcel>";
 			}
 		}
 		receivedParcels = receivedParcels + "</item>";
 		sentParcels = sentParcels + "</item>";
-
-		console.log("postnl receivedParcels:");
-		console.log(receivedParcels);
 
 		postnlModel.xml = receivedParcels;
 		showReceived = true;
