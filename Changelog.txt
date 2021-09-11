@@ -1,5 +1,6 @@
 1.1.21
 - bug fix, causing the details screen to stay empty
+- postnl inbox retrieval issues being investigated
 
 1.1.20
 - in transit packages (waiting at PostNL ophaalpunt) are now shown in the detail screen as well
