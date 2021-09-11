@@ -158,7 +158,9 @@ Screen {
 					} else {
 						if (postNLData['receiver'][i]['delivery']['status'] == 'InTransit') {
 							shipmentTitle = "Zending ontvangen door PostNL, van ";
-							if (postNLData['receiver'][i]['deliveryLocation']['name']) pickupPoint = postNLData['receiver'][i]['deliveryLocation']['name'];
+							if (postNLData['receiver'][i]['deliveryLocation']) {
+								if (postNLData['receiver'][i]['deliveryLocation']['name']) pickupPoint = postNLData['receiver'][i]['deliveryLocation']['name'];
+							}
 						} else {
 							shipmentTitle = "Te ontvangen van ";
 						}
