@@ -1,12 +1,15 @@
 #!/bin/sh
 
 #===================================================================================================================================================================
-# This script can be used to get a json with Track & Trace of packages of Postnl.
-# You need a postnl account to use this script
+# This script retrieves a json with the Track & Trace of the packages in your Postnl account.
+# You need a postnl account to use this script.
 #
-# Version: 1.4  - glsf91 - 8-9-2021"
+# Version: 2.0  - 2026-09-06
+#   Rewritten for the new PostNL login (Akamai Identity Cloud "Hosted Login" / Janrain Capture) that
+#   replaced the old jouw.postnl.nl/identity flow. Packages are now read from the account GraphQL API
+#   and the track-and-trace API, and written to POSTNL-Inbox.json in the same layout the app expects.
 #
-# DON'T RUN this script to many times in a hour. Use at our own risk."
+# DON'T RUN this script too many times in an hour. Use at your own risk.
 #==================================================================================================================================================================="
 
 
@@ -17,78 +20,73 @@
 # end USER SETTINGS
 
 
+# ---- Fixed PostNL/Akamai identity constants (the account web app uses these) ----
+TENANT="https://login.postnl.nl/101112a0-4a0f-4bbb-8176-2f1b2d370d7c"
+OIDC_CLIENT="deb0a372-6d72-4e09-83fe-997beacbd137"
+REDIRECT_URI="postnl://login"
+REDIRECT_URI_ENC="postnl%3A%2F%2Flogin"
+SCOPE="openid profile email poa-profiles-api"
+SCOPE_ENC="openid%20profile%20email%20poa-profiles-api"
+CAPTURE_SERVER="https://login.postnl.nl"
+GRAPHQL_URL="https://jouw.postnl.nl/account/api/graphql"
+TT_URL="https://jouw.postnl.nl/track-and-trace/api/trackAndTrace"
+UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+
 usage() {
-        echo ""
-        echo `basename $0`" [OPTION]
+	echo ""
+	echo `basename $0`" [OPTION]
 
-        This script can be used to get a json with Track & Trace of packages of Postnl.
+	This script can be used to get a json with Track & Trace of packages of Postnl.
 
-        Options:
-        -u <username> (mandatory)
-        -p <password> (mandatory)
-        -d <directory for temporary files> (mandatory)
-        -f Force new login (optional)
-        -v with debug output (optional)
-        -h Display this help text
-		
-        example:
-            -u \"myusername\" -p \"mypassword\" -d \"/tmp/postnl\"
-        "
+	Options:
+	-u <username> (mandatory)
+	-p <password> (mandatory)
+	-d <directory for temporary files> (mandatory)
+	-f Force new login (optional)
+	-v with debug output (optional)
+	-h Display this help text
+
+	example:
+	    -u \"myusername\" -p \"mypassword\" -d \"/tmp/postnl\"
+	"
 }
 
 debug_output() {
 	if $DEBUG
-	then 
-		echo "$*"; 
+	then
+		echo "$*";
 	fi
 }
 
-exit_abnormal() {                              # Function: Exit with error.
-  usage
-  exit 1
+exit_abnormal() {
+	usage
+	exit 1
 }
 
 removeFile() {
 	if [ -f "$1" ]
 	then
-		rm $1
+		rm "$1"
 	fi
 }
 
-readInbox() {
-	if [ ! -s "$1" ]
-	then
-		echo "Error readInbox(): file $1 with accesscode doesn't exist. Abort"
-		return 1
-	fi
-
-	ACCODE=`cat $1`
-
-	RESPFILE="$TMPDIR/postnl-resp6.tmp"
-	removeFile $RESPFILE
-
-	STATUSCODE=`curl $PROXY -w "\n%{http_code}" -k -o $RESPFILE -b $COOKIEFILE -c $COOKIEFILE -s -H "Authorization: Bearer $ACCODE" "https://jouw.postnl.nl/web/api/default/inbox"`
-	if [ ! $STATUSCODE = "200" ]
-	then
-		echo "Error: Wrong responsecode $STATUSCODE received from default/inbox request. See $RESPFILE. Aborting."
-		if [ $STATUSCODE = "401" ]
-		then
-			removeFile $1   # remove access code file
-			echo "Access code file removed for next run"
-		fi
-		return 1
-	fi
-
-	if [ -s $RESPFILE ]
-	then
-		mv $RESPFILE $INBOXFILE
-		echo "Succeeded: inbox json received from postnl"
-		echo "`date '+%Y-%m-%d %H:%M:%S'`" > $TMPDIR/lastupdate.log
-	else
-		echo "Warning: succeeded but empty json received for inbox request."
-		echo "Previous json file will not be replaced."
-	fi
+# Extract a "key":"value" string field from a flat json blob (first match). Prints raw value (may contain json escapes).
+jstr() {
+	# $1 = json, $2 = key
+	printf '%s' "$1" | sed -n 's/.*"'"$2"'":"\([^"]*\)".*/\1/p' | head -n 1
 }
+
+# Extract a "key":<value> where value is bool/number/null (first match)
+jval() {
+	printf '%s' "$1" | sed -n 's/.*"'"$2"'":\([^,}]*\).*/\1/p' | head -n 1
+}
+
+# Sanitize a value so it is safe to place inside a json string in our output:
+# drop double quotes and backslashes and control chars (values are short display text).
+jsan() {
+	printf '%s' "$1" | tr -d '"\\' | tr -d '\000-\037' | sed -e 's/^ *//' -e 's/ *$//'
+}
+
 
 #Start
 
@@ -100,51 +98,26 @@ DEBUG=false
 
 PROGARGS="$@"
 
-#get command options
 while getopts "u:p:d:fhv" opt $PROGARGS
 do
 	case $opt in
-		u)
-			USERNAME=$OPTARG
-			;;
-		p)
-			PASSWORD=$OPTARG
-			;;
-		d)
-			TMPDIR=$OPTARG
-			;;
-		f)
-			FORCELOGIN=true
-			;;
-		v)
-			DEBUG=true
-			;;
-		h)  usage
-			exit 1
-			;;
-		\?)
-			echo "Invalid option: -$OPTARG"
-			exit_abnormal
-			;;
-		:)               # If expected argument omitted:
-			echo "Error: -${OPTARG} requires an argument."
-			exit_abnormal
-			;;
-		*)               # If unknown (any other) option:
-			exit_abnormal
-			;;
+		u) USERNAME=$OPTARG ;;
+		p) PASSWORD=$OPTARG ;;
+		d) TMPDIR=$OPTARG ;;
+		f) FORCELOGIN=true ;;
+		v) DEBUG=true ;;
+		h) usage; exit 1 ;;
+		\?) echo "Invalid option: -$OPTARG"; exit_abnormal ;;
+		:) echo "Error: -${OPTARG} requires an argument."; exit_abnormal ;;
+		*) exit_abnormal ;;
 	esac
 done
 
-
 debug_output "Set username: $USERNAME"
-debug_output "Set password: $PASSWORD"
 debug_output "Set directory for temporary files: $TMPDIR"
 debug_output "Set debug output: $DEBUG"
 debug_output "Set force login:  $FORCELOGIN"
 
-
-# Check 
 [ -z "$USERNAME" ] && exit_abnormal
 [ -z "$PASSWORD" ] && exit_abnormal
 [ -z "$TMPDIR" ] && exit_abnormal
@@ -152,236 +125,369 @@ debug_output "Set force login:  $FORCELOGIN"
 echo ""
 
 COOKIEFILE="$TMPDIR/postnl-cookie-jar.txt"
-ACCESSCODEFILE="$TMPDIR/postnl-acccescode"
+REFRESHFILE="$TMPDIR/postnl-refreshtoken"
 INBOXFILE="$TMPDIR/POSTNL-Inbox.json"
 
-#check if the directory already exists, otherwise create the directory
-if [ ! -d $TMPDIR ]
-then
-	mkdir -p $TMPDIR
-fi
+if [ ! -d "$TMPDIR" ]; then mkdir -p "$TMPDIR"; fi
+if [ ! -d "$TMPDIR" ]; then echo "Error: Directory $TMPDIR creation failed. Aborting."; exit 1; fi
 
-if [ ! -d $TMPDIR ]
-then
-	echo "Error: Directory $TMPDIR creation failed. Aborting."
-    exit 1
-fi
+cd "$TMPDIR"
 
-cd $TMPDIR
+ACCESSTOKEN=""
 
-#if accesscode is less then 60 minutes old, reuse it. If older or not exist, start from beginning.
-if [ -f $ACCESSCODEFILE ] && ! $FORCELOGIN
-then
-	if [ -n "$(find $ACCESSCODEFILE  -mmin -60 -type f)" ]
-	then 
-		echo "Found recent accesscode. Re-use this accesscode."
-		readInbox $ACCESSCODEFILE
-		exit
+# ---------------------------------------------------------------------------
+# refreshTokens: use a stored refresh token to get a fresh access token.
+# Sets ACCESSTOKEN on success and rotates the stored refresh token. Returns 1 on failure.
+# ---------------------------------------------------------------------------
+refreshTokens() {
+	if [ ! -s "$REFRESHFILE" ]; then return 1; fi
+	RT=`cat "$REFRESHFILE"`
+	RESP="$TMPDIR/postnl-refresh.tmp"
+	removeFile "$RESP"
+	STATUSCODE=`curl $PROXY -s -k -A "$UA" -w "%{http_code}" -o "$RESP" \
+		--data-urlencode "grant_type=refresh_token" \
+		--data-urlencode "client_id=$OIDC_CLIENT" \
+		--data-urlencode "refresh_token=$RT" \
+		"$TENANT/login/token"`
+	if [ ! "$STATUSCODE" = "200" ]; then
+		debug_output "Refresh token rejected (status $STATUSCODE). Full login required."
+		return 1
 	fi
-fi
+	ACCESSTOKEN=`jstr "\`cat $RESP\`" access_token`
+	NEWRT=`jstr "\`cat $RESP\`" refresh_token`
+	if [ -z "$ACCESSTOKEN" ]; then return 1; fi
+	if [ -n "$NEWRT" ]; then printf '%s' "$NEWRT" > "$REFRESHFILE"; fi
+	echo "Re-used login via refresh token."
+	return 0
+}
 
-echo "No recent access code. Start login postnl sequence."
+# ---------------------------------------------------------------------------
+# fullLogin: complete the hosted-login flow with username/password. Sets ACCESSTOKEN and stores refresh token.
+# ---------------------------------------------------------------------------
+fullLogin() {
+	echo "Start full login sequence."
+	removeFile "$COOKIEFILE"
 
+	# PKCE
+	CODEVERIFIER=`dd bs=32 count=1 status=none </dev/urandom | hexdump -e '32/1 "%02x""\n"'`
+	CODECHALLENGE=`printf '%s' "$CODEVERIFIER" | openssl dgst -sha256 -binary | openssl base64 | tr -d '\n' | sed -e 's/+/-/g' -e 's/\//_/g' -e 's/=//g'`
+	STATE=`dd bs=16 count=1 status=none </dev/urandom | hexdump -e '16/1 "%02x""\n"'`
 
-removeFile $COOKIEFILE
+	AUTHURL="$TENANT/login/authorize?client_id=$OIDC_CLIENT&response_type=code&scope=$SCOPE_ENC&redirect_uri=$REDIRECT_URI_ENC&state=$STATE&code_challenge=$CODECHALLENGE&code_challenge_method=S256"
 
-
-# Step 1
-
-debug_output ""
-debug_output "Start step 1"
-
-REQUESTVERIFICATIONTOKEN=""
-RETURNURL=""
-
-RESPFILE="$TMPDIR/postnl-resp1.tmp"
-removeFile $RESPFILE
-
-
-# Generate CodeVerifier, stateValue and codeChallenge
-
-RANDOM=`dd bs=32 count=1 status=none </dev/urandom`
-CODEVERIFIER=`echo -n $RANDOM | hexdump -e '32/1 "%02x""\n"'`
-debug_output "CodeVerifier: $CODEVERIFIER"
-TMP1=`echo -n "$CODEVERIFIER" | openssl dgst -sha256 -binary | openssl base64`
-CODECHALLENGE=`echo -n $TMP1 | sed -e 's/\+/-/g' -e 's/\//_/g' -e 's/=//g'`
-debug_output "codeChallenge: $CODECHALLENGE"
-
-STATEVALUE=`dd bs=32 count=1 </dev/urandom status=none | hexdump -e '32/1 "%02x""\n"'`
-debug_output "stateValue: $STATEVALUE"
-
-OUTPUTCURL=`curl --tlsv1.2 $PROXY -i -o $RESPFILE -k -b $COOKIEFILE -c $COOKIEFILE -s -L -w %{url_effective} --request GET --header 'Connection: close' "https://jouw.postnl.nl/identity/connect/authorize?client_id=poa-profiles-web&audience=poa-profiles-api&scope=openid%20profile%20email%20poa-profiles-api%20hashed-data&response_type=code&code_challenge_method=S256&code_challenge=$CODECHALLENGE&prompt=prompt&state=$STATEVALUE&redirect_uri=https://jouw.postnl.nl/account/login&ui_locales=nl_NL"`
-#debug_output "Output identity/connect/authorize: $OUTPUTCURL"
-
-if ! echo $OUTPUTCURL | grep -q "^https://jouw.postnl.nl"
-then
-	echo "Error: Wrong redirect received from connect/authorize request. See $RESPFILE. Aborting."
-	echo "       Response: $OUTPUTCURL"
-	exit 1
-fi
-
-REQUESTVERIFICATIONTOKEN=`cat $RESPFILE | tr '\n' '\r' | sed "s/.*__RequestVerificationToken.* value=\"\([^\"]*\).*/\1/"` 
-if [ ${#REQUESTVERIFICATIONTOKEN} -lt 100 ] || [ ${#REQUESTVERIFICATIONTOKEN} -gt 200 ]
-then 
-	echo "Error: RequestVerificationToken has wrong size. Aborting."
-	exit 1
-fi
-
-debug_output "RequestVerificationToken: $REQUESTVERIFICATIONTOKEN"
-
-URLWITHSTATIC=`cat $RESPFILE | tr '\n' '\r' | sed "s/.*script.type=.*src=\"\([^\"]*\).*/\1/"` 
-if [ ${#URLWITHSTATIC} -lt 35 ] || [ ${#URLWITHSTATIC} -gt 90 ]
-then 
-	echo "Error: UrlWithStatic has wrong size. Aborting."
-	exit 1
-fi
-
-debug_output "UrlWithStatic: $URLWITHSTATIC"
-
-
-RETURNURL=`cat $RESPFILE | tr '\n' '\r' | sed "s/.*id=\"ReturnUrl\" name=\"ReturnUrl\" value=\"\([^\"]*\).*/\1/"` 
-if [ ${#RETURNURL} -lt 200 ] || [ ${#RETURNURL} -gt 600 ]
-then 
-	echo "Error: ReturnUrl has wrong size. Aborting."
-	exit 1
-fi
-
-RETURNURL=`echo "$RETURNURL"| sed 's/\&amp;/\&/g'`
-
-debug_output "ReturnUrl: $RETURNURL"
-
-
-# Step 2
-debug_output ""
-debug_output "Start step 2"
-
-RESPFILE="$TMPDIR/postnl-resp2.tmp"
-removeFile $RESPFILE
-
-RANDOMSENSORDATA=`dd bs=11 count=1 status=none </dev/urandom | hexdump -e '11/1 "%02x""\n"'`
-debug_output "RANDOMSENSORDATA: $RANDOMSENSORDATA"
-
-STATUSCODE=`curl --tlsv1.2 $PROXY -w "\n%{http_code}" -o $RESPFILE -k -s -b $COOKIEFILE -c $COOKIEFILE --request POST --header 'Expect:' --header 'Connection: close' --header 'Content-Type: text/plain' --data-raw '{"sensor_data":"'$RANDOMSENSORDATA'1.7-1,2,-94,-100,Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36,uaend,12147,20030107,en-US,Gecko,3,0,0,0,401332,8195179,1920,1160,1920,1200,1721,897,1737,,cpen:0,i1:0,dm:0,cwen:0,non:1,opc:0,fc:0,sc:0,wrc:1,isc:0,vib:1,bat:1,x11:0,x12:1,8285,0.840719214420,815559097589.5,0,loc:-1,2,-94,-101,do_en,dm_en,t_en-1,2,-94,-105,-1,2,-94,-102,-1,2,-94,-108,-1,2,-94,-110,-1,2,-94,-117,-1,2,-94,-111,0,64,-1,-1,-1;-1,2,-94,-109,0,64,-1,-1,-1,-1,-1,-1,-1,-1,-1;-1,2,-94,-114,-1,2,-94,-103,-1,2,-94,-112,https://jouw.postnl.nl/account/en-GB/login-1,2,-94,-115,1,32,32,64,64,0,128,266,0,1631118195179,9,17449,0,0,2908,0,0,276,128,0,B3269EC8C075EB3D8B90228F0C050428~-1~YAAQDk5lX6ofEb17AQAAHHw4xgav5VXX/FFMC+v58x45dqhbXJ9NfQzbmunRW7by74JP7DAb39ESYtAtsGtbrN60v06N49GfqnxBEBHkj7JfIHSNXxyxV/8TA0z9y0jrduBQ+eMBIW07KihqKAHsiFhWAxj778/DCEThrNtw/MwWsgdVUR0ldxRmb/3L5tIGuFWsOKrkQteAsyzYjRYB6C8Ay3hgDwHpx5W3W5oJyRgKQFyDViVAsrA+SHmFUlMSChoXSG0G/wp8DRU8DNeU7ZNG9Oa0Q45/Jg8Ib3RQkIpjI2AqljaBHtCB7nfNWt+T/GOD8HsATiL8GzY3WNC3IvdGkT8SN6Ui/VdfuDhuvHvsEhOxGVWlSsmw8zRpBgv5t+SLbuDD3Jza~-1~||1-TjSghKVJlX-1-10-1000-2||~-1,38039,999,-164885365,30261693,PiZtE,73626,50,0,-1-1,2,-94,-106,8,1-1,2,-94,-119,-1-1,2,-94,-122,0,0,0,0,1,0,0-1,2,-94,-123,-1,2,-94,-124,0.5fdbbc572929e,0.f47e137d3e239,0.e620de3d4f825,0.2d2511663c28,0.7caa696f5f877,0.4eee3e3ec2ddd,0.10bf922d18a7d,0.f2fd25abd6796,0.940ae7a4895f2,0.4eca252c68fc;0,0,1,0,0,1,1,2,1,2;0,0,4,0,0,0,1,5,3,11;B3269EC8C075EB3D8B90228F0C050428,1631118195179,TjSghKVJlX,B3269EC8C075EB3D8B90228F0C0504281631118195179TjSghKVJlX,1,1,0.5fdbbc572929e,B3269EC8C075EB3D8B90228F0C0504281631118195179TjSghKVJlX10.5fdbbc572929e,116,224,150,57,95,116,152,175,213,111,222,192,194,215,67,236,221,149,114,97,142,204,15,168,177,0,195,156,181,159,116,201,203,0,1631118195445;-1,2,-94,-126,-1,2,-94,-127,11321144241322243122-1,2,-94,-70,420217769;1243744842;dis;,7,8;true;true;true;-120;true;24;24;true;false;-1-1,2,-94,-80,5528-1,2,-94,-116,24585597-1,2,-94,-118,121662-1,2,-94,-129,ef9216fc326496a8227a7fc12bd42b7add55e95003515406b71315a7378f5030,1,0,Google Inc. (NVIDIA),ANGLE (NVIDIA, NVIDIA GeForce GTX 1650 SUPER Direct3D11 vs_5_0 ps_5_0, D3D11-27.21.14.5671),95f5b71fe531f867faa814bdd4050dd8057206d53ecec1163523560525884870,33-1,2,-94,-121,;19;2;0"}'  https://jouw.postnl.nl$URLWITHSTATIC`
-if [ ! $STATUSCODE = "201" ]
-then
-	echo "Error: Wrong responsecode $STATUSCODE received from static step 2 request. See $RESPFILE. Aborting."
-	exit 1
-fi
-
-if ! grep -q "{\"success\": true}" $RESPFILE
-then
-	echo "Error: No success: true received from static request. See $RESPFILE. Aborting."
-	exit 1
-fi
-
-
-# Step 3
-debug_output ""
-debug_output "Start step 3"
-
-RESPFILE="$TMPDIR/postnl-resp3.tmp"
-removeFile $RESPFILE
-
-STATUSCODE=`curl --tlsv1.2 $PROXY -i -w "\n%{http_code}" -o $RESPFILE -k -s -b $COOKIEFILE -c $COOKIEFILE -L --header 'Connection: close' --data-urlencode "Username=$USERNAME" --data-urlencode "Password=$PASSWORD" --data-urlencode "ReturnUrl=$RETURNURL" --data-urlencode "__RequestVerificationToken=$REQUESTVERIFICATIONTOKEN" --data-urlencode 'button=login' https://jouw.postnl.nl/identity/Account/login`
-
-if [ ! $STATUSCODE = "200" ]
-then
-	echo "Error: Wrong responsecode $STATUSCODE received from Account/Login step 3 request. See $RESPFILE. Aborting."
-	exit 1
-fi
-
-if grep -q "?botdetected=true" $RESPFILE
-then
-	echo "Error: Request is detetcted as a bot. After a while it will work again. See $RESPFILE. Aborting."
-	exit 1
-fi
-
-
-# Generate CodeVerifier, stateValue and codeChallenge
-
-RANDOM=`dd bs=32 count=1 status=none </dev/urandom`
-CODEVERIFIER=`echo -n $RANDOM | hexdump -e '32/1 "%02x""\n"'`
-debug_output "CodeVerifier: $CODEVERIFIER"
-TMP1=`echo -n "$CODEVERIFIER" | openssl dgst -sha256 -binary | openssl base64`
-CODECHALLENGE=`echo -n $TMP1 | sed -e 's/\+/-/g' -e 's/\//_/g' -e 's/=//g'`
-debug_output "codeChallenge: $CODECHALLENGE"
-
-STATEVALUE=`dd bs=32 count=1 </dev/urandom status=none | hexdump -e '32/1 "%02x""\n"'`
-debug_output "stateValue: $STATEVALUE"
-
-
-# Step 4
-debug_output ""
-debug_output "Start step 4"
-
-RESPFILE="$TMPDIR/postnl-resp4.tmp"
-removeFile $RESPFILE
-
-OUTPUTCURL=`curl --tlsv1.2 $PROXY -i -o $RESPFILE -k -b $COOKIEFILE -c $COOKIEFILE -s -L -w %{url_effective} --header 'Connection: close' --request GET "https://jouw.postnl.nl/identity/connect/authorize?client_id=pwb-web&audience=poa-profiles-api&scope=openid%20profile%20email%20poa-profiles-api%20pwb-web-api&response_type=code&code_challenge_method=S256&code_challenge=$CODECHALLENGE&prompt=none&state=$STATEVALUE&redirect_uri=https://jouw.postnl.nl/silent-renew.html&ui_locales=nl_NL"`
-#debug_output "Output identity/connect/authorize: $OUTPUTCURL"
-
-if ! echo $OUTPUTCURL | grep -q "^https://jouw.postnl.nl"
-then
-	echo "Error: Wrong redirect received from connect/authorize request. See $RESPFILE. Aborting."
-	echo "       Response: $OUTPUTCURL"
-	exit 1
-fi
-
-if ! echo $OUTPUTCURL | grep -q "code="
-then
-	echo "Error: Wrong redirect received from connect/authorize request. See $RESPFILE. Aborting."
-	echo "       Response: $OUTPUTCURL"
-	exit 1
-fi
-
-CODE=`echo -n $OUTPUTCURL | sed 's/.*code=\(.*\)\&scope.*/\1/'`
-debug_output "Code: $CODE"
-
-
-# Step 5
-debug_output ""
-debug_output "Start step 5"
-
-RESPFILE="$TMPDIR/postnl-resp5.tmp"
-removeFile $RESPFILE
-
-STATUSCODE=`curl --tlsv1.2 $PROXY -w "\n%{http_code}" -k -o $RESPFILE -b $COOKIEFILE -c $COOKIEFILE -s -d "grant_type=authorization_code&client_id=pwb-web&code=$CODE&code_verifier=$CODEVERIFIER&redirect_uri=https%3A%2F%2Fjouw.postnl.nl%2Fsilent-renew.html"  https://jouw.postnl.nl/identity/connect/token`
-if [ ! $STATUSCODE = "200" ]
-then
-	echo "Error: Wrong responsecode $STATUSCODE received from connect/token request. See $RESPFILE. Aborting."
-	if grep -q "invalid_grant" $RESPFILE
-	then
-		echo "Invalid grant received. Try again if you want in a few minutes. Aborting"
+	# Step 1: authorize -> redirect to hosted login page
+	H1="$TMPDIR/postnl-h1.tmp"; removeFile "$H1"
+	curl $PROXY -s -k -A "$UA" -c "$COOKIEFILE" -b "$COOKIEFILE" -D "$H1" -o /dev/null "$AUTHURL"
+	AUTHUI=`grep -i '^location:' "$H1" | sed 's/^[Ll]ocation: *//' | tr -d '\r' | head -n 1`
+	if ! echo "$AUTHUI" | grep -q "auth-ui"; then
+		echo "Error: no hosted-login redirect received from authorize. Aborting."
+		return 1
 	fi
+	AUTHUIQUERY=`echo "$AUTHUI" | sed 's/^[^?]*?//'`
+
+	# Step 2: load hosted login page (sets _csrf_token cookie, exposes capture settings)
+	R2="$TMPDIR/postnl-r2.tmp"; removeFile "$R2"
+	curl $PROXY -s -k -A "$UA" -c "$COOKIEFILE" -b "$COOKIEFILE" -o "$R2" "$AUTHUI"
+	CAP_APPID=`grep -o "appId: *'[^']*'" "$R2" | grep -v "'None'" | head -n 1 | sed "s/.*'\([^']*\)'/\1/"`
+	CAP_CLIENT=`grep -o "clientId: *'[^']*'" "$R2" | head -n 1 | sed "s/.*'\([^']*\)'/\1/"`
+	CAP_FLOW=`grep -o "flowName: *'[^']*'" "$R2" | head -n 1 | sed "s/.*'\([^']*\)'/\1/"`
+	CSRF=`grep "_csrf_token" "$COOKIEFILE" | tail -n 1 | awk '{print $NF}'`
+	[ -z "$CAP_FLOW" ] && CAP_FLOW="standard"
+	if [ -z "$CAP_APPID" ] || [ -z "$CAP_CLIENT" ]; then
+		echo "Error: could not read login widget settings. Aborting."
+		return 1
+	fi
+	debug_output "capture appId=$CAP_APPID client=$CAP_CLIENT flow=$CAP_FLOW"
+
+	# Step 2b: flow file -> current flow version
+	FLOWJS="$TMPDIR/postnl-flow.tmp"; removeFile "$FLOWJS"
+	curl $PROXY -s -k -A "$UA" -o "$FLOWJS" "https://ssl-static.janraincapture.com/widget_data/flow.js:$CAP_APPID:nl-NL:HEAD:$CAP_FLOW"
+	FLOWVERSION=`grep -o '"version": *"[^"]*"' "$FLOWJS" | head -n 1 | sed 's/.*: *"\([^"]*\)"/\1/'`
+	[ -z "$FLOWVERSION" ] && FLOWVERSION="HEAD"
+	debug_output "flowVersion=$FLOWVERSION"
+
+	# Step 3: submit credentials to the capture widget
+	CAPREDIRECT="${AUTHUI}&socialRedirect=True"
+	TRANSID=`dd bs=20 count=1 status=none </dev/urandom | hexdump -e '20/1 "%02x""\n"'`
+	R3="$TMPDIR/postnl-r3.tmp"; removeFile "$R3"
+	curl $PROXY -s -k -A "$UA" -c "$COOKIEFILE" -b "$COOKIEFILE" -o "$R3" \
+		-e "$AUTHUI" -H "Origin: https://login.postnl.nl" \
+		--data "utf8=%E2%9C%93" \
+		--data-urlencode "js_version=d445bf4" \
+		--data-urlencode "capture_screen=signIn" \
+		--data-urlencode "capture_transactionId=$TRANSID" \
+		--data-urlencode "flow=$CAP_FLOW" \
+		--data-urlencode "client_id=$CAP_CLIENT" \
+		--data-urlencode "redirect_uri=$CAPREDIRECT" \
+		--data-urlencode "response_type=token" \
+		--data-urlencode "flow_version=$FLOWVERSION" \
+		--data-urlencode "settings_version=" \
+		--data-urlencode "locale=nl-NL" \
+		--data-urlencode "recaptcha_version=2" \
+		--data-urlencode "form=signInForm" \
+		--data-urlencode "signInEmailAddress=$USERNAME" \
+		--data-urlencode "currentPassword=$PASSWORD" \
+		"$CAPTURE_SERVER/widget/traditional_signin.jsonp" >/dev/null 2>&1
+
+	# Step 3b: fetch the sign-in result (holds the short-lived capture access token)
+	R3B="$TMPDIR/postnl-r3b.tmp"; removeFile "$R3B"
+	NOW=`date +%s`000
+	curl $PROXY -s -k -A "$UA" -c "$COOKIEFILE" -b "$COOKIEFILE" -o "$R3B" \
+		-e "$AUTHUI" "$CAPTURE_SERVER/widget/get_result.jsonp?transactionId=$TRANSID&cache=$NOW"
+	if grep -q '"statusMessage":"invalidCredentials"' "$R3B" || grep -q 'invalidPassword' "$R3B"; then
+		echo "Error: PostNL rejected the username/password. Aborting."
+		return 1
+	fi
+	CAPTOKEN=`jstr "\`cat $R3B\`" accessToken`
+	if [ -z "$CAPTOKEN" ]; then
+		echo "Error: no capture access token received (login failed). Aborting."
+		return 1
+	fi
+
+	# Step 4: hand the capture token to auth-ui token-url, establishing the SSO session cookie
+	curl $PROXY -s -k -A "$UA" -c "$COOKIEFILE" -b "$COOKIEFILE" -o /dev/null \
+		-e "$AUTHUI" \
+		--data-urlencode "authenticated=True" \
+		--data-urlencode "registering=False" \
+		--data-urlencode "accessToken=$CAPTOKEN" \
+		--data-urlencode "_csrf_token=$CSRF" \
+		"$TENANT/auth-ui/token-url?$AUTHUIQUERY"
+
+	# Step 4b: re-request authorize; with the SSO cookie it redirects to redirect_uri?code=...
+	H4B="$TMPDIR/postnl-h4b.tmp"; removeFile "$H4B"
+	curl $PROXY -s -k -A "$UA" -c "$COOKIEFILE" -b "$COOKIEFILE" -D "$H4B" -o /dev/null "$AUTHURL"
+	LOC=`grep -i '^location:' "$H4B" | sed 's/^[Ll]ocation: *//' | tr -d '\r' | head -n 1`
+	CODE=`echo "$LOC" | sed -n 's/.*[?&]code=\([^&]*\).*/\1/p'`
+	N=0
+	while [ -z "$CODE" ] && echo "$LOC" | grep -q '^https://' && [ $N -lt 6 ]; do
+		N=$((N+1))
+		HN="$TMPDIR/postnl-h4b_$N.tmp"; removeFile "$HN"
+		curl $PROXY -s -k -A "$UA" -c "$COOKIEFILE" -b "$COOKIEFILE" -D "$HN" -o /dev/null "$LOC"
+		LOC=`grep -i '^location:' "$HN" | sed 's/^[Ll]ocation: *//' | tr -d '\r' | head -n 1`
+		CODE=`echo "$LOC" | sed -n 's/.*[?&]code=\([^&]*\).*/\1/p'`
+	done
+	if [ -z "$CODE" ]; then
+		echo "Error: no authorization code received after login. Aborting."
+		return 1
+	fi
+
+	# Step 5: exchange the code for tokens
+	R5="$TMPDIR/postnl-r5.tmp"; removeFile "$R5"
+	STATUSCODE=`curl $PROXY -s -k -A "$UA" -w "%{http_code}" -o "$R5" \
+		--data-urlencode "grant_type=authorization_code" \
+		--data-urlencode "client_id=$OIDC_CLIENT" \
+		--data-urlencode "code=$CODE" \
+		--data-urlencode "redirect_uri=$REDIRECT_URI" \
+		--data-urlencode "code_verifier=$CODEVERIFIER" \
+		"$TENANT/login/token"`
+	if [ ! "$STATUSCODE" = "200" ]; then
+		echo "Error: token exchange failed (status $STATUSCODE). Aborting."
+		return 1
+	fi
+	ACCESSTOKEN=`jstr "\`cat $R5\`" access_token`
+	NEWRT=`jstr "\`cat $R5\`" refresh_token`
+	if [ -z "$ACCESSTOKEN" ]; then
+		echo "Error: no access token received from token endpoint. Aborting."
+		return 1
+	fi
+	if [ -n "$NEWRT" ]; then printf '%s' "$NEWRT" > "$REFRESHFILE"; fi
+	echo "Full login succeeded."
+	return 0
+}
+
+# ---------------------------------------------------------------------------
+# getToken: obtain an access token, preferring the cached refresh token.
+# ---------------------------------------------------------------------------
+getToken() {
+	if ! $FORCELOGIN; then
+		if refreshTokens; then return 0; fi
+	fi
+	fullLogin
+	return $?
+}
+
+
+getToken || exit 1
+
+
+# ---------------------------------------------------------------------------
+# Fetch the list of tracked shipments (GraphQL)
+# ---------------------------------------------------------------------------
+GQLQUERY='{"query":"{ trackedShipments { receiverShipments { key creationDateTime title barcode delivered deliveredTimeStamp deliveryWindowFrom deliveryWindowTo shipmentType deliveryAddressType sourceDisplayName } senderShipments { key creationDateTime title barcode delivered deliveredTimeStamp deliveryWindowFrom deliveryWindowTo shipmentType deliveryAddressType sourceDisplayName } } }"}'
+
+SHIPFILE="$TMPDIR/postnl-shipments.tmp"; removeFile "$SHIPFILE"
+STATUSCODE=`curl $PROXY -s -k -A "$UA" -w "%{http_code}" -o "$SHIPFILE" \
+	-H "Authorization: Bearer $ACCESSTOKEN" -H "Content-Type: application/json" \
+	--data "$GQLQUERY" "$GRAPHQL_URL"`
+if [ ! "$STATUSCODE" = "200" ]; then
+	echo "Error: shipments request failed (status $STATUSCODE). See $SHIPFILE. Aborting."
+	# a stale refresh token can cause 401; drop it so the next run does a full login
+	if [ "$STATUSCODE" = "401" ]; then removeFile "$REFRESHFILE"; fi
 	exit 1
 fi
-# {"error":"invalid_grant"}
-if ! grep -q "access_token" $RESPFILE
-then
-	echo "Error: No access_code received from connect/token request. See $RESPFILE. Aborting."
+if ! grep -q "trackedShipments" "$SHIPFILE"; then
+	echo "Error: unexpected shipments response. See $SHIPFILE. Aborting."
 	exit 1
 fi
 
-ACCESSCODE=`grep -o '"access_token":"[^"]*' $RESPFILE | grep -o '[^"]*$'`
-debug_output "Access_code: $ACCESSCODE"
-echo -n $ACCESSCODE > $ACCESSCODEFILE
 
-# Step 6
-debug_output ""
-debug_output "Start step 6"
+# ---------------------------------------------------------------------------
+# Split the GraphQL response into per-shipment json objects and (re)build the inbox json.
+# ---------------------------------------------------------------------------
 
-readInbox $ACCESSCODEFILE
+# isolate receiver / sender arrays
+RECEIVERPART=`tr -d '\n' < "$SHIPFILE" | sed -n 's/.*"receiverShipments":\[\(.*\)\],"senderShipments".*/\1/p'`
+SENDERPART=`tr -d '\n' < "$SHIPFILE" | sed -n 's/.*"senderShipments":\[\(.*\)\]}.*/\1/p'`
 
+# split a "[obj},{obj},...]" body (without outer brackets) into one object per line
+split_objects() {
+	printf '%s' "$1" | sed 's/},{/}\n{/g'
+}
 
-#Remove response files.
+# track-and-trace for one shipment key -> writes colli object of the matching barcode to stdout (single line, or empty)
+fetch_tt() {
+	KEY="$1"; BARCODE="$2"
+	TTF="$TMPDIR/postnl-tt.tmp"; removeFile "$TTF"
+	curl $PROXY -s -k -A "$UA" -o "$TTF" -H "Authorization: Bearer $ACCESSTOKEN" "$TT_URL/$KEY?language=nl"
+	tr -d '\n' < "$TTF" | sed -n 's/.*"'"$BARCODE"'":{\(.*\)},"processed".*/\1/p' | head -n 1
+}
+
+# Build one inbox entry (receiver or sender). Uses globals set by caller.
+# Prints the json object for the entry.
+build_entry() {
+	OBJ="$1"; ROLE="$2"   # ROLE = receiver | sender
+
+	BARCODE=`jsan "\`jstr "$OBJ" barcode\`"`
+	KEY=`jstr "$OBJ" key`
+	TITLE=`jsan "\`jstr "$OBJ" title\`"`
+	STYPE=`jsan "\`jstr "$OBJ" shipmentType\`"`
+	DELIVERED=`jval "$OBJ" delivered`
+	DTS=`jsan "\`jstr "$OBJ" deliveredTimeStamp\`"`
+	DWF=`jsan "\`jstr "$OBJ" deliveryWindowFrom\`"`
+	DWT=`jsan "\`jstr "$OBJ" deliveryWindowTo\`"`
+
+	# defaults
+	STATUS="Open"
+	SENDER_COMPANY="$TITLE"
+	SENDER_LAST=""
+	SENDER_TOWN=""
+	PICKUP=""
+	TF_FROM=""
+	TF_TO=""
+	DELDATE=""
+	RCPT_STREET=""
+	RCPT_HOUSE=""
+	RCPT_TOWN=""
+	TT_DELIVERED=""
+	TT_RETURN=""
+	TT_ATRETAIL=""
+	TT_DELDATE=""
+
+	# track & trace enrichment (best effort)
+	COLLI=`fetch_tt "$KEY" "$BARCODE"`
+	if [ -n "$COLLI" ]; then
+		TT_DELIVERED=`jval "$COLLI" isDelivered`
+		TT_RETURN=`jval "$COLLI" isReturnShipment`
+		TT_ATRETAIL=`jval "$COLLI" isAtRetailLocation`
+		TT_DELDATE=`jsan "\`jstr "$COLLI" deliveryDate\`"`
+		# eta window
+		ETA=`printf '%s' "$COLLI" | sed -n 's/.*"eta":{\([^}]*\)}.*/\1/p'`
+		TF_FROM=`jsan "\`jstr "$ETA" start\`"`
+		TF_TO=`jsan "\`jstr "$ETA" end\`"`
+		# sender block town / names
+		SBLOCK=`printf '%s' "$COLLI" | sed -n 's/.*"sender":{\(.*\)},"accountId".*/\1/p'`
+		[ -z "$SBLOCK" ] && SBLOCK=`printf '%s' "$COLLI" | sed -n 's/.*"sender":{\(.*"town":[^,]*\),"country".*/\1/p'`
+		S_COMPANY=`jsan "\`jstr "$SBLOCK" companyName\`"`
+		S_PERSON=`jsan "\`jstr "$SBLOCK" personName\`"`
+		SENDER_TOWN=`jsan "\`printf '%s' "$SBLOCK" | sed -n 's/.*"address":{[^}]*"town":"\([^"]*\)".*/\1/p'\`"`
+		# recipient (for outgoing shipments)
+		RADDR=`printf '%s' "$COLLI" | sed -n 's/.*"recipient":{[^}]*"address":{\([^}]*\)}.*/\1/p'`
+		RCPT_STREET=`jsan "\`jstr "$RADDR" street\`"`
+		RCPT_HOUSE=`jsan "\`jstr "$RADDR" houseNumber\`"`
+		RCPT_TOWN=`jsan "\`jstr "$RADDR" town\`"`
+		# retail pickup location name
+		PICKUP=`jsan "\`printf '%s' "$COLLI" | sed -n 's/.*"retailDeliveryLocation":{[^}]*"name":"\([^"]*\)".*/\1/p'\`"`
+		# prefer the more descriptive sender name from graphql title, else names from T&T
+		if [ -z "$SENDER_COMPANY" ]; then
+			if [ -n "$S_COMPANY" ]; then SENDER_COMPANY="$S_COMPANY"; else SENDER_LAST="$S_PERSON"; fi
+		fi
+	fi
+
+	# decide status
+	if [ "$DELIVERED" = "true" ] || [ "$TT_DELIVERED" = "true" ]; then
+		STATUS="Delivered"
+		DELDATE="$DTS"
+		[ -z "$DELDATE" ] && DELDATE="$TT_DELDATE"
+	elif [ "$TT_RETURN" = "true" ]; then
+		STATUS="ReturnToSender"
+	elif [ -n "$PICKUP" ] || [ "$TT_ATRETAIL" = "true" ]; then
+		STATUS="InTransit"
+	else
+		# use eta window, fall back to graphql delivery window
+		[ -z "$TF_FROM" ] && TF_FROM="$DWF"
+		[ -z "$TF_TO" ] && TF_TO="$DWT"
+		if [ -n "$TF_FROM" ]; then STATUS="Open"; else STATUS="InTransit"; fi
+	fi
+	# for delivered / open with graphql window, still expose the window when present
+	[ -z "$TF_FROM" ] && TF_FROM="$DWF"
+	[ -z "$TF_TO" ] && TF_TO="$DWT"
+
+	if [ "$ROLE" = "receiver" ]; then
+		printf '{"barcode":"%s","shipmentType":"%s","trackedShipment":{"title":"%s"},"delivery":{"status":"%s","deliveryDate":"%s","timeframe":{"from":"%s","to":"%s"}},"sender":{"companyName":"%s","lastName":"%s","town":"%s"},"deliveryLocation":{"name":"%s"}}' \
+			"$BARCODE" "$STYPE" "$TITLE" "$STATUS" "$DELDATE" "$TF_FROM" "$TF_TO" "$SENDER_COMPANY" "$SENDER_LAST" "$SENDER_TOWN" "$PICKUP"
+	else
+		printf '{"barcode":"%s","shipmentType":"%s","trackedShipment":{"title":"%s"},"delivery":{"status":"%s","deliveryDate":"%s","timeframe":{"from":"%s","to":"%s"}},"originalReceiver":{"street":"%s","houseNumber":"%s","town":"%s"},"deliveryLocation":{"name":"%s"}}' \
+			"$BARCODE" "$STYPE" "$TITLE" "$STATUS" "$DELDATE" "$TF_FROM" "$TF_TO" "$RCPT_STREET" "$RCPT_HOUSE" "$RCPT_TOWN" "$PICKUP"
+	fi
+}
+
+TMPOUT="$TMPDIR/POSTNL-Inbox.json.tmp"
+printf '{"receiver":[' > "$TMPOUT"
+
+FIRST=1
+if [ -n "$RECEIVERPART" ]; then
+	split_objects "$RECEIVERPART" > "$TMPDIR/postnl-recv.tmp"
+	while IFS= read -r line || [ -n "$line" ]
+	do
+		[ -z "$line" ] && continue
+		ENTRY=`build_entry "$line" receiver`
+		if [ -z "$ENTRY" ]; then continue; fi
+		if [ $FIRST -eq 1 ]; then FIRST=0; else printf ',' >> "$TMPOUT"; fi
+		printf '%s' "$ENTRY" >> "$TMPOUT"
+	done < "$TMPDIR/postnl-recv.tmp"
+fi
+
+printf '],"sender":[' >> "$TMPOUT"
+
+FIRST=1
+if [ -n "$SENDERPART" ]; then
+	split_objects "$SENDERPART" > "$TMPDIR/postnl-send.tmp"
+	while IFS= read -r line || [ -n "$line" ]
+	do
+		[ -z "$line" ] && continue
+		ENTRY=`build_entry "$line" sender`
+		if [ -z "$ENTRY" ]; then continue; fi
+		if [ $FIRST -eq 1 ]; then FIRST=0; else printf ',' >> "$TMPOUT"; fi
+		printf '%s' "$ENTRY" >> "$TMPOUT"
+	done < "$TMPDIR/postnl-send.tmp"
+fi
+
+printf ']}' >> "$TMPOUT"
+
+# sanity check: must be non-empty and start with {"receiver"
+if [ -s "$TMPOUT" ] && grep -q '^{"receiver"' "$TMPOUT"; then
+	mv "$TMPOUT" "$INBOXFILE"
+	echo "Succeeded: inbox json rebuilt from postnl"
+	echo "`date '+%Y-%m-%d %H:%M:%S'`" > "$TMPDIR/lastupdate.log"
+else
+	echo "Warning: rebuilt inbox json looked invalid. Previous json kept."
+	removeFile "$TMPOUT"
+fi
+
+# cleanup
 if ! $DEBUG
 then
-	rm $TMPDIR/postnl-resp?.tmp
+	rm -f "$TMPDIR"/postnl-*.tmp
 fi
 
 # Done
-
-
-
-
-
